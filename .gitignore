@@ -1,17 +1,10 @@
-# Object files
-*.o
-
-# Libraries
-*.lib
-*.a
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
+TCPIP/WiFi\ Comm\ Demo/Objects\ -\ CommDemo\ App-C32/*
+TCPIP/WiFi\ Comm\ Demo/WiFi\ Comm\ Demo\ MPLAB8.elf
+TCPIP/WiFi\ Comm\ Demo/WiFi\ Comm\ Demo\ MPLAB8.hex
+TCPIP/WiFi\ Comm\ Demo/WiFi\ Comm\ Demo\ MPLAB8.mcw
+TCPIP/WiFiGDemo/WiFiGDemoBoard/build/*
+TCPIP/WiFiGDemo/WiFiGDemoBoard/dist/*
+TCPIP/WiFiGDemo/WiFiGDemoBoard/nbproject/private/SuppressibleMessageMemo.properties
+TCPIP/WiFiGDemo/WiFiGDemoBoard/nbproject/private/private.xml
+TCPIP/WiFiGDemo/WiFiGDemoBoard/nbproject/private/configurations.xml
+TCPIP/WiFiGDemo/WiFiGDemoBoard/nbproject/Makefile-genesis.properties
