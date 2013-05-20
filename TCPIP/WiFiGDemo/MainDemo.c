@@ -88,7 +88,7 @@ static unsigned short wOriginalAppConfigChecksum;    // Checksum of the ROM defa
 extern unsigned char TelnetPut(unsigned char c);
 
 // extern function for Exosite Demo
-extern void Exosite_DEMO(void);
+extern void Exosite_Demo(void);
 extern void Store_App_Config(void);
 extern int button_state;
 
@@ -327,7 +327,7 @@ int main(void)
         mDNSProcess();
         #endif
 
-        Exosite_DEMO();
+        Exosite_Demo();
         // Process application specific tasks here.
         // Any custom modules or processing you need to do should
         // go here.

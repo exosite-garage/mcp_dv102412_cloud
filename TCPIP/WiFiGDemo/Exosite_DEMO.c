@@ -37,24 +37,24 @@
 
 //local defines
 int ping = 0;  // global ping value
-int button_state = 0;  // monitor the button status
-int once_update = 1;  // When you push button, you still need to recover the old status of button to cloud
-int Command_Reading = 0;  // handle the flow for the Command reading, heart beat writing and button status
-int HeartBeat_posting = 0; // handle the flow for the Command reading, heart beat writing and button status
+int button_state = 0;  // monitor button status
+int once_update = 1;  // overwrite push button status on cloud on push button release
+int command_reading = 0;  // switch between command_reading and hearbeat_posting
+int heartbeat_posting = 0; // switch between command_reading and hearbeat_posting
 int nvmram_verify = 0;  // before you write data into internal flash, you should erase flash
-int dhcp_renew = 1;  // record DHCP need to renew ip? or not, if dhcp is renew ip, it'll send new local ip to cloud
-int once_init = 0;  // it's remember the firmware detect times, but we hope that is once
-int rw_fail_cnt = 0;  // Counting the Read/Write fails
+int dhcp_renew = 1;  // check if there is a new ip address, and if so send to cloud
+int once_init = 0;  // confirm firmware once
+int rw_fail_cnt = 0;  // read/write fail count
 int cik_broken = 0;  // maintain the CIK status for application layer
-int setup_wifi = 1;  // Recover the WiFi setting after default WiFi ready, then we don't need to setup too many set
-int delay_count = 0; // global counting value for handle to count the blinking times
-int blinking_times = 0;  // global value for user define the blinking times of indicate cloud status
-int delay_timming = 0; // global value for user define the delay timming of indicate cloud status
-int Demo_Status_Changed = 1; // global value for monitor the cloud status
-DWORD exostatus_time_tick = 0;  // Time tick for WiFi setting and LED2 blinking
-DWORD exobutton_time_tick = 0;  // Help to handle the Button status
-DWORD exowrite_time_tick = 0;   // Help to handle the timing gap of Exosite_Write
-DWORD exostatus_handler_tick = 0;  // for handle the cloud status indicate timing
+int setup_wifi = 1;  // recover the WiFi setting after default WiFi ready
+int delay_count = 0; // global value to count the number of led blinks
+int blinking_times = 0;  // global value for user defined blinking status indicator
+int delay_timing = 0; // global value for user defined cloud status indication
+int demo_status_changed = 1; // global value for monitoring cloud status
+DWORD exostatus_time_tick = 0;  // count for WiFi setting and LED2 blinking
+DWORD exobutton_time_tick = 0;  // count helper for button status
+DWORD exowrite_time_tick = 0;   // count helper for timing gap of Exosite_Write
+DWORD exostatus_handler_tick = 0;  // cloud status indicator handler
 
 typedef struct{
   BYTE MySSID[32];             // Wireless SSID (if using MRF24W)
@@ -158,9 +158,9 @@ int read_command(void)
   char pbuf[50];
 
   // Read LED status from cloud
-  if (HeartBeat_posting == 0)
+  if (heartbeat_posting == 0)
   {
-    Command_Reading++;
+    command_reading++;
     if(Exosite_Read("led", pbuf, 200))
     {
       if (!strncmp(pbuf, "0", 1)) 
@@ -171,8 +171,8 @@ int read_command(void)
       rw_fail_cnt = 0;
       cik_broken = 0;
 
-      if (Command_Reading > 5)
-        Command_Reading = 0;
+      if (command_reading > 5)
+        command_reading = 0;
     }
     else
     {
@@ -182,7 +182,7 @@ int read_command(void)
     }
   }
 
-  if (Command_Reading == 0)
+  if (command_reading == 0)
     return 1;
 
   return 0;
@@ -197,21 +197,21 @@ int read_command(void)
 *
 *  \return  None
 *
-*  \brief  Post ping value to cloud
+*  \brief  Posts ping value to cloud
 *
 *****************************************************************************/
 void heart_beat_report(void)
 {
   char str_heartbeat[50];
 
-  if (Command_Reading == 0)
+  if (command_reading == 0)
   {
     if (TickGet() - exowrite_time_tick > TICK_SECOND)
       exowrite_time_tick = TickGet();
     else
       return;
 
-    HeartBeat_posting = 1;
+    heartbeat_posting = 1;
     sprintf(str_heartbeat, "ping=%d",ping);
     if(Exosite_Write(str_heartbeat,strlen(str_heartbeat)))
     {
@@ -219,7 +219,7 @@ void heart_beat_report(void)
       if (ping == 100)
         ping = 0;
 
-      HeartBeat_posting = 0;
+      heartbeat_posting = 0;
       rw_fail_cnt = 0;
       cik_broken = 0;
     }
@@ -243,7 +243,7 @@ void heart_beat_report(void)
 *
 *  \return  0 - successful, 1 - failure
 *
-*  \brief  Update the DHCP IP of device
+*  \brief  Updates the DHCP IP of device
 *
 *****************************************************************************/
 int update_dev_ip(void)
@@ -274,12 +274,12 @@ int update_dev_ip(void)
 *
 *  \return  1 - count end, 0 - counting
 *
-*  \brief  handles the led2
+*  \brief  Handles LED2
 *
 *****************************************************************************/
 int status_light_handler(int count, int delay)
 {
-  if (Demo_Status_Changed == 0)  return 1;
+  if (demo_status_changed == 0)  return 1;
 
   if (delay == 0)
     delay = 5;
@@ -298,7 +298,7 @@ int status_light_handler(int count, int delay)
   {
     delay_count = 0;
     LED2_IO = 0;
-    Demo_Status_Changed = 0;
+    demo_status_changed = 0;
     return 1;
   }
 
@@ -314,7 +314,7 @@ int status_light_handler(int count, int delay)
 *
 *  \return  1 - count end, 0 - counting
 *
-*  \brief  Indicate Exosite status
+*  \brief  Indicates Exosite status
 *
 *****************************************************************************/
 void show_exo_status(void)
@@ -323,37 +323,37 @@ void show_exo_status(void)
   if (TickGet() - exostatus_handler_tick > TICK_SECOND)
   {
     exostatus_handler_tick = TickGet();
-    if (Demo_Status_Changed == 0)
+    if (demo_status_changed == 0)
       exo_code = Exosite_StatusCode();
   }
 
   if (EXO_STATUS_OK == exo_code)
   {
-    Demo_Status_Changed = 1;
+    demo_status_changed = 1;
     blinking_times = 1;
-    delay_timming = 0;
+    delay_timing = 0;
   }
   else if (EXO_STATUS_BAD_TCP == exo_code)
   {
-    Demo_Status_Changed = 1;
+    demo_status_changed = 1;
     blinking_times = 2;
-    delay_timming = 0;
+    delay_timing = 0;
   }
   else if (EXO_STATUS_BAD_SN == exo_code)
   {
-    Demo_Status_Changed = 1;
+    demo_status_changed = 1;
     blinking_times = 3;
-    delay_timming = 0;
+    delay_timing = 0;
   }
   else if (EXO_STATUS_BAD_CIK == exo_code || EXO_STATUS_NOAUTH == exo_code)
   {
-    Demo_Status_Changed = 1;
+    demo_status_changed = 1;
     blinking_times = 4;
-    delay_timming = 0;
+    delay_timing = 0;
   }
 
-  if (1 == Demo_Status_Changed)
-    status_light_handler(blinking_times, delay_timming);
+  if (1 == demo_status_changed)
+    status_light_handler(blinking_times, delay_timing);
 
   return;
 }
@@ -367,7 +367,7 @@ void show_exo_status(void)
 *
 *  \return  None
 *
-*  \brief  Exosite major service and handles the cloud work sequence
+*  \brief  Cloud sequence handler for Exosite demo
 *
 *****************************************************************************/
 void Exosite_Service(void)
@@ -419,13 +419,13 @@ void Exosite_Service(void)
 *
 *  \return  1 - WiFi Firmware check done, 0 - WiFi Firmware check not done
 *
-*  \brief  Check and indicate the WiFi Firmware version.
+*  \brief  Checks and indicates WiFi firmware version.
 *
 *****************************************************************************/
 int wifi_fw_detect(void)
 {
 #if defined(MRF24WG)
-  if (1 == Demo_Status_Changed && once_init == 0)
+  if (1 == demo_status_changed && once_init == 0)
   {
     tWFDeviceInfo deviceInfo;
     int state = 0;
@@ -438,7 +438,7 @@ int wifi_fw_detect(void)
       state = status_light_handler(6, 0);
     if (state == 1)
     {
-      Demo_Status_Changed = 0;
+      demo_status_changed = 0;
       once_init = 1;
     }
   }
@@ -456,7 +456,7 @@ int wifi_fw_detect(void)
 *
 *  \return  None
 *
-*  \brief  Stores the AppConfig into internal Flash
+*  \brief  Stores the AppConfig into internal flash
 *
 *****************************************************************************/
 void Store_App_Config(void)
@@ -495,7 +495,7 @@ void Store_App_Config(void)
 *
 *  \return  None
 *
-*  \brief  Copies the AppConfig from internal Flash
+*  \brief  Copies the AppConfig from internal flash
 *
 *****************************************************************************/
 void Load_App_Config(void)
@@ -527,16 +527,16 @@ void Load_App_Config(void)
 
 /*****************************************************************************
 *
-*  Exosite_DEMO
+*  Exosite_Demo
 *
 *  \param  None
 *
 *  \return  None
 *
-*  \brief  Main function of Exosite Demo code
+*  \brief  Main function of Exosite demo code
 *
 *****************************************************************************/
-void Exosite_DEMO(void)
+void Exosite_Demo(void)
 {
   int fw_check_done = 0;
   fw_check_done = wifi_fw_detect();
