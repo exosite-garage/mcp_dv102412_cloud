@@ -722,6 +722,17 @@ void HTTPPrint_led(WORD num)
 }
 
 // ======================================
+// = Sends the MAC Address    =
+// ======================================
+void HTTPPrint_macaddr(void)
+{
+    char macAddr[18];
+ 
+    sprintf(macAddr,"%02X:%02X:%02X:%02X:%02X:%02X",AppConfig.MyMACAddr.v[0], AppConfig.MyMACAddr.v[1], AppConfig.MyMACAddr.v[2], AppConfig.MyMACAddr.v[3], AppConfig.MyMACAddr.v[4], AppConfig.MyMACAddr.v[5]);
+    TCPPutString(sktHTTP, (BYTE *)macAddr);
+}
+
+// ======================================
 // = Sends the IP Address    =
 // ======================================
 void HTTPPrint_ipaddr(void)

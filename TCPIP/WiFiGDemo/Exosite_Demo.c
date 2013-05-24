@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*  exosite.c - Exosite cloud communications.
+*  Exosite_Demo.c - Exosite cloud applications.
 *  Copyright (C) 2013 Exosite LLC
 *
 *  Redistribution and use in source and binary forms, with or without
@@ -95,8 +95,8 @@ int button_monitor(void)
   if (button_state == 1)
   {
     char inbuf_01[50];
-    sprintf(inbuf_01, "push_button=%d",button_state);
-    if(Exosite_Write(inbuf_01,strlen(inbuf_01)))
+    sprintf(inbuf_01, "push_button=%d", button_state);
+    if(Exosite_Write(inbuf_01, strlen(inbuf_01)))
     {
       once_update = 1;
       button_state = 0;
@@ -121,8 +121,8 @@ int button_monitor(void)
     else
       return 1;
 
-    sprintf(inbuf_02, "push_button=%d",button_state);
-    if(Exosite_Write(inbuf_02,strlen(inbuf_02)))
+    sprintf(inbuf_02, "push_button=%d", button_state);
+    if(Exosite_Write(inbuf_02, strlen(inbuf_02)))
     {
       once_update = 0;
       rw_fail_cnt = 0;
@@ -163,9 +163,9 @@ int read_command(void)
     command_reading++;
     if(Exosite_Read("led", pbuf, 200))
     {
-      if (!strncmp(pbuf, "0", 1)) 
+      if (!strncmp(pbuf, "0", 1))
         LED1_IO = 0;
-      else if (!strncmp(pbuf, "1", 1)) 
+      else if (!strncmp(pbuf, "1", 1))
         LED1_IO = 1;
 
       rw_fail_cnt = 0;
@@ -212,7 +212,7 @@ void heart_beat_report(void)
       return;
 
     heartbeat_posting = 1;
-    sprintf(str_heartbeat, "ping=%d",ping);
+    sprintf(str_heartbeat, "ping=%d", ping);
     if(Exosite_Write(str_heartbeat,strlen(str_heartbeat)))
     {
       ping++;
@@ -250,8 +250,8 @@ int update_dev_ip(void)
 {
   char str_ip[50];
 
-  sprintf(str_ip, "local_ip=%d.%d.%d.%d",AppConfig.MyIPAddr.v[0], AppConfig.MyIPAddr.v[1], AppConfig.MyIPAddr.v[2], AppConfig.MyIPAddr.v[3]);
-  if(Exosite_Write(str_ip,strlen(str_ip)))
+  sprintf(str_ip, "local_ip=%d.%d.%d.%d", AppConfig.MyIPAddr.v[0], AppConfig.MyIPAddr.v[1], AppConfig.MyIPAddr.v[2], AppConfig.MyIPAddr.v[3]);
+  if(Exosite_Write(str_ip, strlen(str_ip)))
   {
     rw_fail_cnt = 0;
     cik_broken = 0;
@@ -268,7 +268,7 @@ int update_dev_ip(void)
 
 /*****************************************************************************
 *
-*  status_light_handler
+*  status_led_handler
 *
 *  \param  int count, int delay
 *
@@ -277,7 +277,7 @@ int update_dev_ip(void)
 *  \brief  Handles LED2
 *
 *****************************************************************************/
-int status_light_handler(int count, int delay)
+int status_led_handler(int count, int delay)
 {
   if (demo_status_changed == 0)  return 1;
 
@@ -353,7 +353,7 @@ void show_exo_status(void)
   }
 
   if (1 == demo_status_changed)
-    status_light_handler(blinking_times, delay_timing);
+    status_led_handler(blinking_times, delay_timing);
 
   return;
 }
@@ -394,7 +394,7 @@ void Exosite_Service(void)
   {
     if (nvmram_verify == 1)
     {
-      Exosite_Init("microchip","dv102412",IF_WIFI, 1);
+      Exosite_Init("microchip", "dv102412", IF_WIFI, 1);
       nvmram_verify = 0;
       dhcp_renew = 1;
     } else {
@@ -431,11 +431,11 @@ int wifi_fw_detect(void)
     int state = 0;
     WF_GetDeviceInfo(&deviceInfo);  // only call this once, not continually
     if (deviceInfo.romVersion == 0x30)
-      state = status_light_handler(2, 0);
+      state = status_led_handler(2, 0);
     else if (deviceInfo.romVersion == 0x31)
-      state = status_light_handler(4, 0);
+      state = status_led_handler(4, 0);
     else
-      state = status_light_handler(6, 0);
+      state = status_led_handler(6, 0);
     if (state == 1)
     {
       demo_status_changed = 0;
@@ -478,7 +478,7 @@ void Store_App_Config(void)
     char tmpCIK[40];
     if (Exosite_GetCIK(tmpCIK))
     {
-      Exosite_Init("microchip","dv102412",IF_WIFI, 1);
+      Exosite_Init("microchip", "dv102412", IF_WIFI, 1);
       Exosite_SetCIK(tmpCIK);
     }
     Exosite_SetMRF((char *)&app_temp, sizeof(_store_app_temp));
@@ -562,4 +562,5 @@ void Exosite_Demo(void)
     Exosite_Service();
   }
 }
+
 

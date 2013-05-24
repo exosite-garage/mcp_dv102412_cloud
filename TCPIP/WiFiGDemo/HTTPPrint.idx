@@ -19,3 +19,4 @@
 +led(2)
 +btn(0)
 aplist
++macaddr
