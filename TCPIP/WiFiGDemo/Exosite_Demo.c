@@ -34,45 +34,20 @@
 *****************************************************************************/
 #include "../../exosite/exosite.h"
 #include "MainDemo.h"
+#include "Exosite_Demo.h"
 
 //local defines
-int ping = 0;  // global ping value
-int button_state = 0;  // monitor button status
-int once_update = 1;  // overwrite push button status on cloud on push button release
-int command_reading = 0;  // switch between command_reading and hearbeat_posting
-int heartbeat_posting = 0; // switch between command_reading and hearbeat_posting
-int nvmram_verify = 0;  // before you write data into internal flash, you should erase flash
-int dhcp_renew = 1;  // check if there is a new ip address, and if so send to cloud
-int once_init = 0;  // confirm firmware once
-int rw_fail_cnt = 0;  // read/write fail count
-int cik_broken = 0;  // maintain the CIK status for application layer
-int setup_wifi = 1;  // recover the WiFi setting after default WiFi ready
-int delay_count = 0; // global value to count the number of led blinks
-int blinking_times = 0;  // global value for user defined blinking status indicator
-int delay_timing = 0; // global value for user defined cloud status indication
-int demo_status_changed = 1; // global value for monitoring cloud status
-DWORD exostatus_time_tick = 0;  // count for WiFi setting and LED2 blinking
-DWORD exobutton_time_tick = 0;  // count helper for button status
-DWORD exowrite_time_tick = 0;   // count helper for timing gap of Exosite_Write
-DWORD exostatus_handler_tick = 0;  // cloud status indicator handler
-
-typedef struct{
-  BYTE MySSID[32];             // Wireless SSID (if using MRF24W)
-  BYTE SsidLength;             // number of bytes in SSID
-  BYTE SecurityMode;           // WF_SECURITY_OPEN or one of the other security modes
-  BYTE SecurityKey[64];        // WiFi Security key, or passphrase.
-  BYTE SecurityKeyLength;      // number of bytes in security key (can be 0)
-  BYTE WepKeyIndex;            // WEP key index (only valid for WEP)
-  BYTE dataValid;
-  BYTE networkType;
-  BYTE saveSecurityInfo;       // Save 32-byte PSK
-} _store_app_temp;
 
 // local functions
-
-// global functions
-void Store_App_Config(void);
-void Load_App_Config(void);
+int button_monitor(void);
+int read_command(void);
+int heart_beat_report(void);
+int update_dev_ip(void);
+void status_led1_handler(int count);
+int status_led2_handler(int count, int delay);
+void show_exo_status(void);
+int wifi_fw_detect(void);
+int task_delay(int delay_time, int count);
 
 // externs
 
@@ -81,370 +56,64 @@ void Load_App_Config(void);
 
 /*****************************************************************************
 *
-*  button_monitor
+*  task_delay
 *
 *  \param  None
 *
-*  \return  1 = working, 0 = not working
+*  \return  delay counting is done
 *
-*  \brief  Monitors the button status
+*  \brief  Demo tasks delay function
 *
 *****************************************************************************/
-int button_monitor(void)
+int task_delay(int delay_time, int count)
 {
-  if (button_state == 1)
+  if (TickGet() - demo_delay_time_tick > delay_time)
   {
-    char inbuf_01[50];
-    sprintf(inbuf_01, "push_button=%d", button_state);
-    if(Exosite_Write(inbuf_01, strlen(inbuf_01)))
-    {
-      once_update = 1;
-      button_state = 0;
-      exobutton_time_tick = TickGet();
-      rw_fail_cnt = 0;
-      cik_broken = 0;
-    }
-    else
-    {
-      rw_fail_cnt++;
-      if (rw_fail_cnt > 100)
-        cik_broken = 1;
-    }
+    demo_delay_count++;
+    demo_delay_time_tick = TickGet();
+  }
+
+  if (count <= demo_delay_count)
+  {
+    demo_delay_count = 0;
     return 1;
-  }
-
-  if (button_state == 0 && once_update == 1)
-  {
-    char inbuf_02[50];
-    if (TickGet() - exobutton_time_tick > TICK_SECOND / 4)
-      exobutton_time_tick = TickGet();
-    else
-      return 1;
-
-    sprintf(inbuf_02, "push_button=%d", button_state);
-    if(Exosite_Write(inbuf_02, strlen(inbuf_02)))
-    {
-      once_update = 0;
-      rw_fail_cnt = 0;
-      cik_broken = 0;
-    }
-    else
-    {
-      rw_fail_cnt++;
-      if (rw_fail_cnt > 100)
-        cik_broken = 1;
-
-      return 1;
-    }
-  }
-
-  return 0;
-}
-
-
-/*****************************************************************************
-*
-*  read_command
-*
-*  \param  None
-*
-*  \return  1 = Read command done, 0 = Reading ...
-*
-*  \brief  Reads command from cloud
-*
-*****************************************************************************/
-int read_command(void)
-{
-  char pbuf[50];
-
-  // Read LED status from cloud
-  if (heartbeat_posting == 0)
-  {
-    command_reading++;
-    if(Exosite_Read("led", pbuf, 200))
-    {
-      if (!strncmp(pbuf, "0", 1))
-        LED1_IO = 0;
-      else if (!strncmp(pbuf, "1", 1))
-        LED1_IO = 1;
-
-      rw_fail_cnt = 0;
-      cik_broken = 0;
-
-      if (command_reading > 5)
-        command_reading = 0;
-    }
-    else
-    {
-      rw_fail_cnt++;
-      if (rw_fail_cnt > 100)
-        cik_broken = 1;
-    }
-  }
-
-  if (command_reading == 0)
-    return 1;
-
-  return 0;
-}
-
-
-/*****************************************************************************
-*
-*  heart_beat_report
-*
-*  \param  None
-*
-*  \return  None
-*
-*  \brief  Posts ping value to cloud
-*
-*****************************************************************************/
-void heart_beat_report(void)
-{
-  char str_heartbeat[50];
-
-  if (command_reading == 0)
-  {
-    if (TickGet() - exowrite_time_tick > TICK_SECOND)
-      exowrite_time_tick = TickGet();
-    else
-      return;
-
-    heartbeat_posting = 1;
-    sprintf(str_heartbeat, "ping=%d", ping);
-    if(Exosite_Write(str_heartbeat,strlen(str_heartbeat)))
-    {
-      ping++;
-      if (ping == 100)
-        ping = 0;
-
-      heartbeat_posting = 0;
-      rw_fail_cnt = 0;
-      cik_broken = 0;
-    }
-    else
-    {
-      rw_fail_cnt++;
-      if (rw_fail_cnt > 100)
-        cik_broken = 1;
-    }
-  }
-
-  return;
-}
-
-
-/*****************************************************************************
-*
-*  update_dev_ip
-*
-*  \param  None
-*
-*  \return  0 - successful, 1 - failure
-*
-*  \brief  Updates the DHCP IP of device
-*
-*****************************************************************************/
-int update_dev_ip(void)
-{
-  char str_ip[50];
-
-  sprintf(str_ip, "local_ip=%d.%d.%d.%d", AppConfig.MyIPAddr.v[0], AppConfig.MyIPAddr.v[1], AppConfig.MyIPAddr.v[2], AppConfig.MyIPAddr.v[3]);
-  if(Exosite_Write(str_ip, strlen(str_ip)))
-  {
-    rw_fail_cnt = 0;
-    cik_broken = 0;
-    return 0;
   }
   else
-    rw_fail_cnt++;
-
-  if (rw_fail_cnt > 100)
-    cik_broken = 1;
-  return 1;
+    return 0;
 }
 
 
 /*****************************************************************************
 *
-*  status_led_handler
-*
-*  \param  int count, int delay
-*
-*  \return  1 - count end, 0 - counting
-*
-*  \brief  Handles LED2
-*
-*****************************************************************************/
-int status_led_handler(int count, int delay)
-{
-  if (demo_status_changed == 0)  return 1;
-
-  if (delay == 0)
-    delay = 5;
-
-  if (TickGet() - exostatus_time_tick > TICK_SECOND / delay)
-  {
-    exostatus_time_tick = TickGet();
-    if (delay_count < (count * 2))
-    {
-      LED2_INV();
-      delay_count++;
-    }
-  }
-
-  if (delay_count >= (count * 2))
-  {
-    delay_count = 0;
-    LED2_IO = 0;
-    demo_status_changed = 0;
-    return 1;
-  }
-
-  return 0;
-}
-
-
-/*****************************************************************************
-*
-*  show_exo_status
-*
-*  \param  None
-*
-*  \return  1 - count end, 0 - counting
-*
-*  \brief  Indicates Exosite status
-*
-*****************************************************************************/
-void show_exo_status(void)
-{
-  int exo_code = EXO_STATUS_END;
-  if (TickGet() - exostatus_handler_tick > TICK_SECOND)
-  {
-    exostatus_handler_tick = TickGet();
-    if (demo_status_changed == 0)
-      exo_code = Exosite_StatusCode();
-  }
-
-  if (EXO_STATUS_OK == exo_code)
-  {
-    demo_status_changed = 1;
-    blinking_times = 1;
-    delay_timing = 0;
-  }
-  else if (EXO_STATUS_BAD_TCP == exo_code)
-  {
-    demo_status_changed = 1;
-    blinking_times = 2;
-    delay_timing = 0;
-  }
-  else if (EXO_STATUS_BAD_SN == exo_code)
-  {
-    demo_status_changed = 1;
-    blinking_times = 3;
-    delay_timing = 0;
-  }
-  else if (EXO_STATUS_BAD_CIK == exo_code || EXO_STATUS_NOAUTH == exo_code)
-  {
-    demo_status_changed = 1;
-    blinking_times = 4;
-    delay_timing = 0;
-  }
-
-  if (1 == demo_status_changed)
-    status_led_handler(blinking_times, delay_timing);
-
-  return;
-}
-
-
-/*****************************************************************************
-*
-*  Exosite_Service
+*  Erase_App_Config
 *
 *  \param  None
 *
 *  \return  None
 *
-*  \brief  Cloud sequence handler for Exosite demo
+*  \brief  Erases the AppConfig in internal flash
 *
 *****************************************************************************/
-void Exosite_Service(void)
+void Erase_App_Config(void)
 {
-  int code = Exosite_StatusCode();
-  if (EXO_STATUS_OK == code || EXO_STATUS_BAD_TCP == code)
-  {
-    if (dhcp_renew == 1)
-    {
-      dhcp_renew = update_dev_ip();
-    }
-    else
-    {
-      // when you want to provision again, you should verify the nvram
-      nvmram_verify = 1;
-      if (!button_monitor())
-      {
-        heart_beat_report();
-        read_command();
-      }
-    }
-  }
-  else if (EXO_STATUS_BAD_CIK == code || EXO_STATUS_NOAUTH == code || cik_broken == 1)
-  {
-    if (nvmram_verify == 1)
-    {
-      Exosite_Init("microchip", "dv102412", IF_WIFI, 1);
-      nvmram_verify = 0;
-      dhcp_renew = 1;
-    } else {
-      if(!Exosite_Activate())
-        cik_broken = 1;
-      else
-        cik_broken = 0;
-    }
-  }
+  char tmpCIK[40];
+  char backupCIK = 0;
+  LEDS_OFF();
+  DelayMs(150);
+  // 1) backup CIK, 2) erases Exosite meta, 3) Set CIK back
+  if (Exosite_GetCIK(tmpCIK))
+    backupCIK = 1;
 
-  show_exo_status();
+  Exosite_Init("microchip", "dv102412", IF_WIFI, 1);
 
+  if (backupCIK == 1)
+    Exosite_SetCIK(tmpCIK);
+
+  // blinking 3 times per second
+  status_led1_handler(3);
+
+  Reset();
   return;
-}
-
-
-/*****************************************************************************
-*
-*  wifi_fw_detect
-*
-*  \param  None
-*
-*  \return  1 - WiFi Firmware check done, 0 - WiFi Firmware check not done
-*
-*  \brief  Checks and indicates WiFi firmware version.
-*
-*****************************************************************************/
-int wifi_fw_detect(void)
-{
-#if defined(MRF24WG)
-  if (1 == demo_status_changed && once_init == 0)
-  {
-    tWFDeviceInfo deviceInfo;
-    int state = 0;
-    WF_GetDeviceInfo(&deviceInfo);  // only call this once, not continually
-    if (deviceInfo.romVersion == 0x30)
-      state = status_led_handler(2, 0);
-    else if (deviceInfo.romVersion == 0x31)
-      state = status_led_handler(4, 0);
-    else
-      state = status_led_handler(6, 0);
-    if (state == 1)
-    {
-      demo_status_changed = 0;
-      once_init = 1;
-    }
-  }
-#endif
-
-  return once_init;
 }
 
 
@@ -476,12 +145,25 @@ void Store_App_Config(void)
      strncmp((char *)app_temp_verify.SecurityKey, (char *)app_temp.SecurityKey, 64))
   {
     char tmpCIK[40];
+    char backupCIK = 0;
+    LEDS_OFF();
+
+    // 1) backup CIK, 2) erases Exosite meta, 3) Set CIK back, 4) Set WiFi config back
     if (Exosite_GetCIK(tmpCIK))
-    {
-      Exosite_Init("microchip", "dv102412", IF_WIFI, 1);
+      backupCIK = 1;
+
+    Exosite_Init("microchip", "dv102412", IF_WIFI, 1);
+
+    if (backupCIK == 1)
       Exosite_SetCIK(tmpCIK);
-    }
+
     Exosite_SetMRF((char *)&app_temp, sizeof(_store_app_temp));
+
+    setup_wifi = 1;
+    // blinking twice second
+    status_led1_handler(2);
+
+    Reset();
   }
   return;
 }
@@ -503,7 +185,10 @@ void Load_App_Config(void)
   _store_app_temp temp;
 
   Exosite_GetMRF((char *)&temp, sizeof(_store_app_temp));
-  if (temp.networkType == CFG_WF_INFRASTRUCTURE)
+  if (temp.MySSID[0] == 0x00 || temp.MySSID[0] == 0xff)
+    return;
+
+  if (temp.networkType == CFG_WF_INFRASTRUCTURE && temp.dataValid == 1)
   {
     memcpy(AppConfig.MySSID, temp.MySSID, 32);
     memcpy(AppConfig.SecurityKey, temp.SecurityKey, 64);
@@ -518,7 +203,418 @@ void Load_App_Config(void)
     CFGCXT.type = temp.networkType;
     CFGCXT.cfg_state = cfg_stopped;
 
+    // re-config the WiFi Access Point
     WF_START_EASY_CONFIG();
+  }
+
+  return;
+}
+
+
+/*****************************************************************************
+*
+*  button_monitor
+*
+*  \param  None
+*
+*  \return  0 = working, 1 = not working
+*
+*  \brief  Monitors the button status
+*
+*****************************************************************************/
+int button_monitor(void)
+{
+  if (button_state == 0 && once_update == 0)
+    return 1;
+
+  if (button_state == 1)
+  {
+    char inbuf_01[50];
+    sprintf(inbuf_01, "push_button=%d", button_state);
+    if(Exosite_Write(inbuf_01, strlen(inbuf_01)))
+    {
+      once_update = 1;
+      button_state = 0;
+
+      return 0;
+    }
+  }
+
+  if (button_state == 0 && once_update == 1)
+  {
+    char inbuf_02[50];
+
+    sprintf(inbuf_02, "push_button=%d", button_state);
+    if(Exosite_Write(inbuf_02, strlen(inbuf_02)))
+    {
+      once_update = 0;
+
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+
+/*****************************************************************************
+*
+*  read_command
+*
+*  \param  None
+*
+*  \return  1 = Read command done, 0 = Reading ...
+*
+*  \brief  Reads command from cloud
+*
+*****************************************************************************/
+int read_command(void)
+{
+  char pbuf[50];
+
+  // Read LED status from cloud
+  if(Exosite_Read("led", pbuf, 200))
+  {
+    if (!strncmp(pbuf, "0", 1))
+      LED1_IO = 0;
+    else if (!strncmp(pbuf, "1", 1))
+      LED1_IO = 1;
+
+    return 1;
+  }
+
+  return 0;
+}
+
+
+/*****************************************************************************
+*
+*  heart_beat_report
+*
+*  \param  None
+*
+*  \return  1 If reported is done, 0 If not done
+*
+*  \brief  Posts ping value to cloud
+*
+*****************************************************************************/
+int heart_beat_report(void)
+{
+  char str_heartbeat[50];
+
+  sprintf(str_heartbeat, "ping=%d", ping);
+  if(Exosite_Write(str_heartbeat,strlen(str_heartbeat)))
+  {
+    ping++;
+    if (ping == 100)
+      ping = 0;
+
+    return 1;
+  }
+
+  return 0;
+}
+
+
+/*****************************************************************************
+*
+*  update_dev_ip
+*
+*  \param  None
+*
+*  \return  1 - successful, 0 - failure
+*
+*  \brief  Updates the DHCP IP of device
+*
+*****************************************************************************/
+int update_dev_ip(void)
+{
+  char str_ip[50];
+
+  sprintf(str_ip, "local_ip=%d.%d.%d.%d&ssid=%s", AppConfig.MyIPAddr.v[0], AppConfig.MyIPAddr.v[1], AppConfig.MyIPAddr.v[2], AppConfig.MyIPAddr.v[3], AppConfig.MySSID);
+  if(Exosite_Write(str_ip, strlen(str_ip)))
+  {
+    return 1;
+  }
+
+  return 0;
+}
+
+
+/*****************************************************************************
+*
+*  status_led1_handler
+*
+*  \param  int count
+*
+*  \return  None
+*
+*  \brief  Handles LED1, don't use it when the device in cloud demos.
+*
+*****************************************************************************/
+void status_led1_handler(int count)
+{
+  int i = 0;
+
+  LED1_IO = 0; //clean LED1 status
+  DelayMs(150);
+
+  // blinking
+  for (i = 0; i < count; i++)
+  {
+    LED1_IO = 1;
+    DelayMs(100);
+    LED1_IO = 0;
+    DelayMs(100);
+  }
+
+  DelayMs(150);
+
+  return;
+}
+
+
+/*****************************************************************************
+*
+*  status_led2_handler
+*
+*  \param  int count, int delay
+*
+*  \return  0 - count end, 1 - counting
+*
+*  \brief  Handles LED2
+*
+*****************************************************************************/
+int status_led2_handler(int count, int delay)
+{
+  if (count == 0)
+    return 1;
+
+  if (delay == 0)
+    delay = 5;
+
+  if (TickGet() - led2_time_tick > TICK_SECOND / delay)
+  {
+    led2_time_tick = TickGet();
+    if (led2_delay_count < (count * 2))
+    {
+      LED2_INV();
+      led2_delay_count++;
+    }
+  }
+
+  if (led2_delay_count >= (count * 2))
+  {
+    led2_delay_count = 0;
+    LED2_IO = 0;
+    return 0;
+  }
+
+  return 1;
+}
+
+
+/*****************************************************************************
+*
+*  show_cloud_status
+*
+*  \param  None
+*
+*  \return  None
+*
+*  \brief  Indicates cloud status per second
+*
+*****************************************************************************/
+int show_cloud_status(void)
+{
+  int status = 0;
+  int led2_blinking_times = 0;
+  int led2_delay_timming = 0;
+
+  if (TickGet() - cloudstatus_time_tick > TICK_SECOND * 2)
+  {
+    cloudstatus_time_tick = TickGet();
+    if (0 != cloudstatus_time_tick && EXO_STATUS_END == latest_exo_code)
+      latest_exo_code = Exosite_StatusCode();
+  }
+
+  if (EXO_STATUS_OK == latest_exo_code)
+  {
+    led2_blinking_times = 1;
+    led2_delay_timming = 0;
+    tcp_fail_count = 0;
+  }
+  else if (EXO_STATUS_BAD_TCP == latest_exo_code || EXO_STATUS_BAD_RESP == latest_exo_code)
+  {
+    led2_blinking_times = 2;
+    led2_delay_timming = 0;
+  }
+  else if (EXO_STATUS_BAD_SN == latest_exo_code)
+  {
+    led2_blinking_times = 3;
+    led2_delay_timming = 0;
+  }
+  else if (EXO_STATUS_BAD_CIK == latest_exo_code ||
+          EXO_STATUS_NOAUTH == latest_exo_code ||
+          EXO_STATUS_CONFLICT == latest_exo_code)
+  {
+    led2_blinking_times = 4;
+    led2_delay_timming = 0;
+  }
+
+  if (EXO_STATUS_END != latest_exo_code)
+  {
+    status = status_led2_handler(led2_blinking_times, led2_delay_timming);
+    //cleaning
+    if (status == 0)
+    {
+      latest_exo_code = EXO_STATUS_END;
+      led2_blinking_times = 0;
+      led2_delay_timming = 0;
+      // if TCP fail > 100 times, we'll hope it can reboot automatically
+      if (EXO_STATUS_OK == latest_exo_code)
+        tcp_fail_count = 0;
+      if (EXO_STATUS_BAD_TCP == latest_exo_code)
+        tcp_fail_count++;
+
+      if (tcp_fail_count > 50)
+      {
+        tcp_fail_count = 0;
+        Reset();
+      }
+    }
+  }
+
+  return status;
+}
+
+
+/*****************************************************************************
+*
+*  wifi_fw_detect
+*
+*  \param  None
+*
+*  \return  1 - WiFi Firmware check done, 0 - WiFi Firmware check not done
+*
+*  \brief  Checks and indicates WiFi firmware version.
+*
+*****************************************************************************/
+int wifi_fw_detect(void)
+{
+#if defined(MRF24WG)
+  if (once_init == 0)
+  {
+    tWFDeviceInfo deviceInfo;
+    int state = 1;
+    WF_GetDeviceInfo(&deviceInfo);  // only call this once, not continually
+    if (deviceInfo.romVersion == 0x30)
+      state = status_led2_handler(2, 0);
+    else if (deviceInfo.romVersion == 0x31)
+      state = status_led2_handler(4, 0);
+    else
+      state = status_led2_handler(6, 0);
+    if (state == 0)
+    {
+      once_init = 1;
+    }
+  }
+#endif
+
+  return once_init;
+}
+
+
+/*****************************************************************************
+*
+*  check_network_connected
+*
+*  \param  None
+*
+*  \return  TRUE if network ready, FALSE if not
+*
+*  \brief  Checks to see that network is still connected.
+*
+*****************************************************************************/
+unsigned char
+check_network_connected(void)
+{
+  int network_connected  = 0;
+  if (!wifi_fw_detect())
+    return 0;
+
+  // loads pre-WiFi config
+  if (setup_wifi == 1)
+  {
+    if (task_delay(TICK_SECOND, 1))
+    {
+      Load_App_Config();
+      setup_wifi = 0;
+    }
+  }
+
+  if (WFisConnected() != TRUE)
+  {
+    LED1_IO = 0;
+    LED2_IO = 0;
+    network_connected = 0;
+    if (CFGCXT.type != WF_SOFT_AP && AppConfig.networkType == WF_INFRASTRUCTURE && network_connected == 0)
+    {
+      //wifi_fail_count = global_delay(TICK_MINUTE);
+      if (task_delay(TICK_MINUTE, 1))
+        wifi_fail_count++;
+
+      if (wifi_fail_count > 2)
+      {
+        wifi_fail_count = 0;
+        network_connected = 0;
+        Erase_App_Config();
+        Reset();
+      }
+    }
+    return network_connected;
+  }
+
+  if (DHCPIsBound(0))
+    network_connected = 1;
+  else
+    network_connected = 0;
+
+  return network_connected;
+}
+
+
+/*****************************************************************************
+*
+*  check_cloud_activated
+*
+*  \param  None
+*
+*  \return  None
+*
+*  \brief  Checks cloud status is activated
+*
+*****************************************************************************/
+void check_cloud_activated(void)
+{
+  int activate_status = 0;
+
+  if (nvmram_verify == 0)
+  {
+    activate_status = Exosite_Activate();
+    if (activate_status)
+      badcik = 0;
+    else
+      badcik = 1;
+  }
+  else
+  {
+    // 1) backup WiFi config 2) erases Exosite meta 3) set WiFi config in flash
+    _store_app_temp app_temp;
+    Exosite_GetMRF((char *)&app_temp, sizeof(_store_app_temp));
+    Exosite_Init("microchip", "dv102412", IF_WIFI, 1);
+    Exosite_SetMRF((char *)&app_temp, sizeof(_store_app_temp));
+    nvmram_verify = 0;
   }
 
   return;
@@ -538,29 +634,55 @@ void Load_App_Config(void)
 *****************************************************************************/
 void Exosite_Demo(void)
 {
-  int fw_check_done = 0;
-  fw_check_done = wifi_fw_detect();
-
-  if (!(WFisConnected() == TRUE))
-  {
-    dhcp_renew = 1;
+  int workon_demo = 0;
+  if (!check_network_connected())
     return;
-  } else {
-    if (setup_wifi == 1)
+
+  if (task_delay(TICK_SECOND / 3, 1))
+    workon_demo = 1;
+
+  if (workon_demo)
+  {
+    int code = Exosite_StatusCode();
+    if (EXO_STATUS_BAD_CIK == code || EXO_STATUS_NOAUTH == code || badcik == 1)
     {
-      if (TickGet() - exostatus_time_tick > TICK_SECOND * 2)
+      badcik = 1;
+      check_cloud_activated();
+    }
+    else
+    {
+      if (CLOUD_HOME == cloud_status)
       {
-        exostatus_time_tick = TickGet();
-        Load_App_Config();
-        setup_wifi = 0;
+        nvmram_verify = 1; // when you want to provision again, you should verify the nvram
+        if (update_dev_ip())
+        {
+          cloud_status++;
+        }
+      }
+      else if (CLOUD_READING == cloud_status)
+      {
+        if (read_command())
+        {
+          cloud_status++;
+        }
+      }
+      else if (CLOUD_WRITING == cloud_status)
+      {
+        if (heart_beat_report())
+          cloud_status++;
+      }
+      else if (CLOUD_BUTTON_STATUS_UPDATE == cloud_status)
+      {
+        if (button_monitor())
+          cloud_status = CLOUD_READING;
       }
     }
   }
 
-  if (DHCPIsBound(0))
-  {
-    Exosite_Service();
-  }
+  // indicate last status
+  show_cloud_status();
+
+  return;
 }
 
 

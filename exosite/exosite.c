@@ -224,7 +224,7 @@ Exosite_Init(const char *vendor, const char *model, const unsigned char if_nbr, 
 
   exosite_initialized = 1;
 
-  status_code = EXO_STATUS_OK;
+  status_code = EXO_STATUS_INIT_DONE;
 
   return 1;
 }
@@ -340,6 +340,8 @@ Exosite_Activate(void)
 
   exoHAL_SocketClose(sock);
 
+  if (0 == http_status)
+    status_code = EXO_STATUS_BAD_RESP;
   if (200 == http_status)
     status_code = EXO_STATUS_OK;
   if (404 == http_status)
@@ -408,7 +410,7 @@ Exosite_SetCIK(char * pCIK)
     return;
   }
   exosite_meta_write((unsigned char *)pCIK, CIK_LENGTH, META_CIK);
-  status_code = EXO_STATUS_OK;
+  status_code = EXO_STATUS_CIK_STORED;
   return;
 }
 
@@ -509,6 +511,8 @@ Exosite_Write(char * pbuf, unsigned char bufsize)
 
   exoHAL_SocketClose(sock);
 
+  if (0 == http_status)
+    status_code = EXO_STATUS_BAD_RESP;
   if (401 == http_status)
   {
     status_code = EXO_STATUS_NOAUTH;
@@ -640,6 +644,8 @@ Exosite_Read(char * palias, char * pbuf, unsigned char buflen)
 
   exoHAL_SocketClose(sock);
 
+  if (0 == http_status)
+    status_code = EXO_STATUS_BAD_RESP;
   if (200 == http_status)
   {
     status_code = EXO_STATUS_OK;

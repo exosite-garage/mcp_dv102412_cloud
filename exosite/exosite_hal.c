@@ -40,24 +40,11 @@
 #include "stdlib.h"
 
 // local variables
-
-char exometa[META_SIZE];
-const exosite_meta meta_struct;
-
-// local functions
-
-// externs
-//extern char *itoa(int n, char *s, int b);
-extern APP_CONFIG AppConfig;
-
-// global variables
-#define EXOMETA_ADDR 0xbd050000 //0x9d037000
+#define EXOMETA_ADDR 0xbd050000
 TCP_SOCKET exSocket = INVALID_SOCKET;
 int wait_count = 0;
-int wait_response = 0;
 int recv_done = 0;
-int send_end = 0;
-DWORD Timer;
+int send_count = 0;
 static enum _GenericTCPState
 {
   EX_HOME = 0,
@@ -68,12 +55,19 @@ static enum _GenericTCPState
   EX_DONE
 } GenericTCPState = EX_DONE;
 
+// local functions
+
+// externs
+extern APP_CONFIG AppConfig;
+
+// global variables
 
 /*****************************************************************************
 *
-*  exoHAL_ReadHWMAC
+*  exoHAL_ReadUUID
 *
-*  \param  Interface Number (1 - WiFi), buffer to return hexadecimal MAC
+*  \param  if_nbr - Interface Number (1 - WiFi)
+*          UUID_buf - buffer to return hexadecimal MAC
 *
 *  \return 0 if failure; len of UUID if success;
 *
@@ -224,12 +218,12 @@ exoHAL_SocketClose(long socket)
   {
     if (TCPIsConnected((TCP_SOCKET)socket) && recv_done == 1)
     {
-      TCPDisconnect((TCP_SOCKET)socket);
+      TCPClose((TCP_SOCKET)socket);
       recv_done = 0;
+      socket = INVALID_SOCKET;
       exSocket = INVALID_SOCKET;
     }
-    wait_response = 0;
-    send_end = 0;
+    send_count = 0;
     GenericTCPState = EX_DONE;
   }
   return;
@@ -240,7 +234,7 @@ exoHAL_SocketClose(long socket)
 *
 *  exoHAL_SocketOpenTCP
 *
-*  \param  None
+*  \param  server - server's ip
 *
 *  \return -1: failure; Other: socket handle
 *
@@ -250,10 +244,10 @@ exoHAL_SocketClose(long socket)
 long
 exoHAL_SocketOpenTCP(unsigned char *server)
 {
-  DWORD HexIP = 0;
-  int HexPort = server[5] & 0xff;
+  DWORD serverip = 0;
+  int server_port = server[5] & 0xff;
 
-  HexIP = (server[3] << 24 & 0xff000000) | (server[2] << 16 & 0xff0000)
+  serverip = (server[3] << 24 & 0xff000000) | (server[2] << 16 & 0xff0000)
           | (server[1] << 8 & 0xff00) | (server[0] & 0xff);
 
   if (GenericTCPState == EX_DONE)
@@ -264,7 +258,7 @@ exoHAL_SocketOpenTCP(unsigned char *server)
   {
     if (exSocket == INVALID_SOCKET)
     {
-      exSocket = TCPOpen(HexIP, TCP_OPEN_IP_ADDRESS, HexPort, TCP_PURPOSE_GENERIC_TCP_CLIENT);
+      exSocket = TCPOpen(serverip, TCP_OPEN_IP_ADDRESS, server_port, TCP_PURPOSE_GENERIC_TCP_CLIENT);
 
       if (exSocket == INVALID_SOCKET)
       {
@@ -293,7 +287,29 @@ exoHAL_ServerConnect(long sock)
 {
   if (GenericTCPState == EX_SOCKET_OBTAINED)
   {
-    GenericTCPState++;
+    if (TCPWasReset((TCP_SOCKET)sock))
+    {
+      recv_done = 1;
+      GenericTCPState = EX_DISCONNECT;
+      wait_count = 0;
+      return -1;
+    }
+
+    if (TCPIsConnected((TCP_SOCKET)sock))
+    {
+      GenericTCPState = EX_PACKAGE_SEND;
+    }
+    else
+    {
+      wait_count++;
+      if (wait_count > 10)
+      {
+        recv_done = 1;
+        GenericTCPState = EX_DISCONNECT;
+        wait_count = 0;
+        return -1;
+      }
+    }
   }
 
   return (long)sock;
@@ -318,27 +334,17 @@ exoHAL_SocketSend(long socket, char * buffer, unsigned char len)
 
   if (GenericTCPState == EX_PACKAGE_SEND)
   {
-    if (TCPIsConnected((TCP_SOCKET)socket))
-    {
-      char tempbuf[150];
-      memcpy(tempbuf, buffer, len);
-      send_len = TCPPutArray((TCP_SOCKET)socket, (BYTE *)buffer, len);
-      send_end ++;
-      wait_count = 0;
-    }
-    else
-    {
-      wait_count++;
-      if (wait_count > 10)
-      {
-        recv_done = 1;
-        GenericTCPState = EX_DISCONNECT;
-        wait_count = 0;
-      }
-    }
+    int w = TCPIsPutReady((TCP_SOCKET)socket);
+    if(w < len)
+      return send_len;
+
+    send_len = TCPPutArray((TCP_SOCKET)socket, (BYTE *)buffer, len);
+    send_count ++;
+    wait_count = 0;
+    TCPFlush((TCP_SOCKET)socket);
   }
 
-  return len;
+  return send_len;
 }
 
 
@@ -359,39 +365,24 @@ exoHAL_SocketRecv(long socket, char * buffer, unsigned char len)
 {
   WORD w, wGetLen;
 
-  if (!TCPIsConnected((TCP_SOCKET)socket))
-  {
-    wait_count++;
-    if (wait_count > 10)
-    {
-      recv_done = 1;
-      GenericTCPState = EX_DISCONNECT;
-      wait_count = 0;
-    }
-
-    return 0;
-  }
-  else wait_count = 0;
-
-  if (GenericTCPState == EX_PACKAGE_SEND && send_end >= 4)
+  if (GenericTCPState == EX_PACKAGE_SEND && send_count >= 4)
   {
     GenericTCPState++;
   }
 
   if (GenericTCPState == EX_PROCESS_RESPONSE)
   {
-    wait_response++;
     if (!TCPIsGetReady(socket))
     {
       return 0;
     }
     w = TCPIsGetReady((TCP_SOCKET)socket);
     buffer[0] = 0;
-    if ( w )
+    if (w)
     {
       wGetLen = w;
       TCPGetArray((TCP_SOCKET)socket, (BYTE *)buffer, len);
-      if (send_end >= 4 && wait_response > 0 && w < len)
+      if (send_count >= 4 && w < len)
       {
         GenericTCPState = EX_DISCONNECT;
       }
