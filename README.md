@@ -80,17 +80,17 @@ Release Info
 ----------------------------------------
 Release 2013-06-07
 ----------------------------------------
---) improve the network performance, and add the TCPWasReset for check TCP status
---) clean the code in Exosite_Demo
+--) improve the network performance, and add the TCPWasReset for check TCP status<br>
+--) clean the code in Exosite_Demo<br>
 
 ----------------------------------------
 Release 2013-05-24
 ----------------------------------------
---) indicates the MAC Address on welcome webpage
+--) indicates the MAC Address on welcome webpage<br>
 
 ----------------------------------------
 Release 2013-05-16
 ----------------------------------------
---) initial release
+--) initial release<br>
 
 
