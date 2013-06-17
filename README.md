@@ -35,8 +35,8 @@ http://www.microchip.com/mplabx-ide-windows-installer <br>
 7) Use a smart phone or laptop that can select the WiFi Access Point labeled "MCHP_G_****" to provision device AP.<br>
 8) Open http://192.168.1.3, to load Configure Network page, click "Display Scan Results", select your SSID, input your passphrase and save.<br>
 NOTE:
-   1. If you see a "Future home of Mchp error notification." message during your AP setup, you should reboot your device and scan for APs again.<br>
-   2. Every time you want to turn on the dv102412, please confirm the AP is on-line, otherwise you'll waste many time for waiting<br>
+If you see a "Future home of Mchp error notification." message during your AP setup, you should reboot your device and scan for APs again.<br>
+Every time you want to turn on the dv102412, please confirm the AP is on-line, otherwise you'll waste many time for waiting<br>
 9) LED1 will blink 2 times and the device will auto reboot. Make sure that LED2 blinks 4 times to signify that the board has the correct firmware version.<br>
 NOTE: View 'Device Status' section below for more information about LED messages.<br>
 10) When LED0 blinks rapidly for a couple of seconds, the WiFi Access Point has been set successfully.<br>
@@ -80,13 +80,13 @@ Release Info
 ----------------------------------------
 Release 2013-06-07
 ----------------------------------------
---) improve the network performance, and add the TCPWasReset for check TCP status<br>
---) clean the code in Exosite_Demo<br>
+--) improved network performance, and added TCPWasReset to check TCP status<br>
+--) cleaned up code in Exosite_Demo.c<br>
 
 ----------------------------------------
 Release 2013-05-24
 ----------------------------------------
---) indicates the MAC Address on welcome webpage<br>
+--) MAC Address now shown on welcome webpage<br>
 
 ----------------------------------------
 Release 2013-05-16
