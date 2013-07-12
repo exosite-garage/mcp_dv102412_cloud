@@ -304,8 +304,9 @@ Exosite_Activate(void)
         {
           crlf = 0;
           // check the cik length from http response
-          if ('g' == *p) // Find 'g'th:
+          if ('L' == *p) // Find 'L'th:
             cik_ctrl++;
+
           if (cik_ctrl > 0 && ('4' == *p || '0' == *p))
             cik_len_valid++;
         }
