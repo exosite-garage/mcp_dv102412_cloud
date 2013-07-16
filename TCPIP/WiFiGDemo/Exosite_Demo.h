@@ -31,6 +31,7 @@ int led2_delay_count = 0; // global value to count the number of led blinks
 DWORD cloudstatus_time_tick = 0; // global value to record the cloud status indicate time tick
 DWORD demo_delay_time_tick = 0; // global value to record the demo task time tick.
 DWORD led2_time_tick = 0;  // global value to record the LED2 time tick
+DWORD network_err_time_tick = 0;
 int latest_exo_code = EXO_STATUS_END; // records Exosite latest status
 int demo_delay_count = 0; // global value to record the demo delay count
 int cloud_status = 0; // helps for swicth the next cloud status

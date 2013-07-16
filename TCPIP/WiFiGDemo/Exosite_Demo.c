@@ -37,6 +37,7 @@
 #include "Exosite_Demo.h"
 
 //local defines
+int unknown_status = 0;
 
 // local functions
 int button_monitor(void);
@@ -45,9 +46,10 @@ int heart_beat_report(void);
 int update_dev_ip(void);
 void status_led1_handler(int count);
 int status_led2_handler(int count, int delay);
-void show_exo_status(void);
+int show_cloud_status(void);
 int wifi_fw_detect(void);
 int task_delay(int delay_time, int count);
+void check_cloud_activated(void);
 
 // externs
 
@@ -388,7 +390,7 @@ void status_led1_handler(int count)
 int status_led2_handler(int count, int delay)
 {
   if (count == 0)
-    return 1;
+    return 0;
 
   if (delay == 0)
     delay = 5;
@@ -443,16 +445,24 @@ int show_cloud_status(void)
     led2_blinking_times = 1;
     led2_delay_timming = 0;
     tcp_fail_count = 0;
+    unknown_status = 0;
   }
   else if (EXO_STATUS_BAD_TCP == latest_exo_code || EXO_STATUS_BAD_RESP == latest_exo_code)
   {
     led2_blinking_times = 2;
     led2_delay_timming = 0;
+    if (TickGet() - network_err_time_tick > TICK_SECOND * 2)
+    {
+      network_err_time_tick = TickGet();
+      tcp_fail_count++;
+    }
   }
   else if (EXO_STATUS_BAD_SN == latest_exo_code)
   {
     led2_blinking_times = 3;
     led2_delay_timming = 0;
+    tcp_fail_count = 0;
+    unknown_status = 0;
   }
   else if (EXO_STATUS_BAD_CIK == latest_exo_code ||
           EXO_STATUS_NOAUTH == latest_exo_code ||
@@ -460,6 +470,18 @@ int show_cloud_status(void)
   {
     led2_blinking_times = 4;
     led2_delay_timming = 0;
+    tcp_fail_count = 0;
+    unknown_status = 0;
+  }
+  else
+  {
+    if ((TickGet() - network_err_time_tick > TICK_SECOND * 2) &&
+        EXO_STATUS_END != latest_exo_code &&
+        EXO_STATUS_INIT_DONE != latest_exo_code)
+    {
+      network_err_time_tick = TickGet();
+      unknown_status++;
+    }
   }
 
   if (EXO_STATUS_END != latest_exo_code)
@@ -468,20 +490,9 @@ int show_cloud_status(void)
     //cleaning
     if (status == 0)
     {
-      latest_exo_code = EXO_STATUS_END;
       led2_blinking_times = 0;
       led2_delay_timming = 0;
-      // if TCP fail > 100 times, we'll hope it can reboot automatically
-      if (EXO_STATUS_OK == latest_exo_code)
-        tcp_fail_count = 0;
-      if (EXO_STATUS_BAD_TCP == latest_exo_code)
-        tcp_fail_count++;
-
-      if (tcp_fail_count > 50)
-      {
-        tcp_fail_count = 0;
-        Reset();
-      }
+      latest_exo_code = EXO_STATUS_END;
     }
   }
 
@@ -560,19 +571,9 @@ check_network_connected(void)
     network_connected = 0;
     if (CFGCXT.type != WF_SOFT_AP && AppConfig.networkType == WF_INFRASTRUCTURE && network_connected == 0)
     {
-      //wifi_fail_count = global_delay(TICK_MINUTE);
       if (task_delay(TICK_MINUTE, 1))
         wifi_fail_count++;
-
-      if (wifi_fail_count > 2)
-      {
-        wifi_fail_count = 0;
-        network_connected = 0;
-        Erase_App_Config();
-        Reset();
-      }
     }
-    return network_connected;
   }
 
   if (DHCPIsBound(0))
@@ -580,6 +581,25 @@ check_network_connected(void)
   else
     network_connected = 0;
 
+  if (tcp_fail_count > 5 || unknown_status > 5)
+  {
+    LED1_IO = 0;
+    LED2_IO = 0;
+  }
+  if (wifi_fail_count > 2)
+  {
+    wifi_fail_count = 0;
+    Erase_App_Config();
+    Reset();
+  }
+  if (tcp_fail_count > 50 || unknown_status > 50)
+  {
+    tcp_fail_count = 0;
+    unknown_status = 0;
+    wifi_fail_count = 0;
+    network_connected = 0;
+    Reset();
+  }
   return network_connected;
 }
 
@@ -599,15 +619,7 @@ void check_cloud_activated(void)
 {
   int activate_status = 0;
 
-  if (nvmram_verify == 0)
-  {
-    activate_status = Exosite_Activate();
-    if (activate_status)
-      badcik = 0;
-    else
-      badcik = 1;
-  }
-  else
+  if (nvmram_verify != 0)
   {
     // 1) backup WiFi config 2) erases Exosite meta 3) set WiFi config in flash
     _store_app_temp app_temp;
@@ -615,6 +627,15 @@ void check_cloud_activated(void)
     Exosite_Init("microchip", "dv102412", IF_WIFI, 1);
     Exosite_SetMRF((char *)&app_temp, sizeof(_store_app_temp));
     nvmram_verify = 0;
+  }
+
+  if (nvmram_verify == 0)
+  {
+    activate_status = Exosite_Activate();
+    if (activate_status)
+      badcik = 0;
+    else
+      badcik = 1;
   }
 
   return;
@@ -638,6 +659,7 @@ void Exosite_Demo(void)
   if (!check_network_connected())
     return;
 
+  // worked on demo app every 1/3 second
   if (task_delay(TICK_SECOND / 3, 1))
     workon_demo = 1;
 
@@ -655,16 +677,12 @@ void Exosite_Demo(void)
       {
         nvmram_verify = 1; // when you want to provision again, you should verify the nvram
         if (update_dev_ip())
-        {
           cloud_status++;
-        }
       }
       else if (CLOUD_READING == cloud_status)
       {
         if (read_command())
-        {
           cloud_status++;
-        }
       }
       else if (CLOUD_WRITING == cloud_status)
       {
