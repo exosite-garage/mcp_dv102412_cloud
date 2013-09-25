@@ -12,7 +12,7 @@ Project functionality includes:<br>
 
 License is BSD, Copyright 2013, Exosite LLC (see LICENSE file)
 
-Tested and developed on IDE MPLAB X IDE v1.80 for DV102412.<br>
+Tested and developed on IDE MPLAB X IDE v1.90 (1.80 also works) for DV102412.<br>
 
 ========================================
 Validate Firmware and Hardware Versions
@@ -26,7 +26,7 @@ Quick Start
 ========================================
 1) Install MPLAB XC32 Compiler v1.21.<br>
 http://www.microchip.com/mplabxc32windows <br>
-2) Install MPLAB X IDE v1.80 for DV102412.<br>
+2) Install MPLAB X IDE v1.90 for DV102412.<br>
 http://www.microchip.com/mplabx-ide-windows-installer <br>
 3) Download the latest project repository from "https://github.com/exosite-garage/mcp_dv102412_cloud/archive/master.zip".<br>
 4) Extract the project and open the project folder "mcp_dv102412_cloud/TCPIP/WiFiGDemo/WiFiGDemoBoard" with MPLAB X.<br>
@@ -56,11 +56,11 @@ NOTE: View 'Device Status' section below for more information about LED messages
 Device Status
 ========================================
 LED0
-- Blinks continually = WiFi set successfully
+- Blinks continually = WiFi is operational
 
 LED1 - reset WiFi
-- Blinks 2 times = Sets the WiFi Access Point, and it also reboot the device.
-- Blinks 3 times = Erases the WiFi Access Point
+- Blinks 2 times = WiFi Access Point has been set.  Also reboots the device.
+- Blinks 3 times = WiFi Access Point has been erased.
 
 LED2 - device bootup
 - Blinks 2 times = WiFi module firmware version is 0x30.
@@ -68,15 +68,20 @@ LED2 - device bootup
 - Blinks 6 times = WiFi module firmware version is unknown.
 
 LED2 - runtime
-- No Blinks = Device does not connects to cloud
-- Blinks 1 time continually = Read, write and provision successful
-- Blinks 2 times continually = No internet connection
-- Blinks 3 times continually = Device not found on cloud
-- Blinks 4 times continually = CIK invalid
+- No Blinks = Device cannot connect to the Internet
+- 1 Blink, continually = Cloud read, write and provision successful
+- 2 Blinks, continually = No Internet connection
+- 3 Blinks, continually = Device owner not found, no cloud identity
+- 4 Blinks, continually = Device Client Interface Key is invalid
 
 ========================================
 Release Info
 ========================================
+----------------------------------------
+Release 2013-09-25
+----------------------------------------
+--) updated to support MPLAB X v1.90<br>
+
 ----------------------------------------
 Release 2013-06-07
 ----------------------------------------

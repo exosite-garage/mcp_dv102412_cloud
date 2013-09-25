@@ -63,7 +63,7 @@
 
 #if defined( WF_CONSOLE )
 #include "TCPIP Stack/WFConsole.h"
-#include "IperfApp.h"
+//#include "IperfApp.h"  // removing to compile for IDE v1.90
 #endif 
 
 
