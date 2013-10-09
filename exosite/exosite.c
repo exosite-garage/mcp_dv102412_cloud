@@ -87,7 +87,6 @@ int Exosite_GetCIK(char * pCIK);
 int Exosite_StatusCode(void);
 
 // externs
-extern char *itoa(int n, char *s, int b);
 
 // global variables
 static int status_code = 0;
@@ -267,7 +266,7 @@ Exosite_Activate(void)
 
   // Get activation Serial Number
   length = strlen(exosite_provision_info);
-  uitoa((int)length, strLen, 10); //make a string for length
+  exoHAL_itoa(strLen, length, 10); //make a string for length
 
   sendLine(sock, POSTDATA_LINE, "/provision/activate");
   sendLine(sock, HOST_LINE, NULL);
@@ -283,7 +282,6 @@ Exosite_Activate(void)
     char strBuf[RX_SIZE];
     unsigned char strLen, len;
     unsigned char cik_len_valid = 0;
-    unsigned char cik_ctrl = 0;
     char *p;
     unsigned char crlf = 0;
     unsigned char ciklen = 0;
@@ -445,7 +443,7 @@ Exosite_GetCIK(char * pCIK)
 
   for (i = 0; i < CIK_LENGTH; i++)
   {
-    if (!(tempCIK[i] >= 'a' && tempCIK[i] <= 'f' || tempCIK[i] >= '0' && tempCIK[i] <= '9'))
+    if (!((tempCIK[i] >= 'a' && tempCIK[i] <= 'f') || (tempCIK[i] >= '0' && tempCIK[i] <= '9')))
     {
       status_code = EXO_STATUS_BAD_CIK;
       return 0;
@@ -505,7 +503,7 @@ Exosite_Write(char * pbuf, unsigned char bufsize)
 //  s.send('Content-Length: 6\r\n\r\n')
 //  s.send('temp=2')
 
-  uitoa((int)bufsize, strBuf, 10); //make a string for length
+  exoHAL_itoa(strBuf, bufsize, 10); //make a string for length
 
   sendLine(sock, POSTDATA_LINE, "/onep:v1/stack/alias");
   sendLine(sock, HOST_LINE, NULL);

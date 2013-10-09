@@ -51,6 +51,7 @@ long exoHAL_ServerConnect(long socket);
 unsigned char exoHAL_SocketSend(long socket, char * buffer, unsigned char len);
 unsigned char exoHAL_SocketRecv(long socket, char * buffer, unsigned char len);
 void exoHAL_MSDelay(unsigned short delay);
+void exoHAL_itoa(char *str, int value, int base);
 
 #endif
 

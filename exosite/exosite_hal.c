@@ -37,6 +37,7 @@
 #include "exosite_meta.h"
 #include "TCPIPConfig.h"
 #include "TCPIP Stack/TCPIP.h"
+#include "TCPIP Stack/Helpers.h"
 #include "stdlib.h"
 
 // local variables
@@ -412,4 +413,27 @@ exoHAL_MSDelay(unsigned short delay)
 
   return;
 }
+
+/*****************************************************************************
+*
+*  exoHAL_itoa
+*
+*  \param  char *str - convert string
+*          int value - the converted value
+*          int base - define the convert type
+*
+*  \return None
+*
+*  \brief  Delays for specified milliseconds
+*
+*****************************************************************************/
+void
+exoHAL_itoa(char *str, int value, int base)
+{
+  if (base == 10)
+    uitoa(value, (BYTE *)str);
+
+  return;
+}
+
 
