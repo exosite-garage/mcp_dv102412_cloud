@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*  exosite_hal.h - Common header for Exosite hardware adapation layer
+*  strlib.h - String Library functions definitions
 *  Copyright (C) 2012 Exosite LLC
 *
 *  Redistribution and use in source and binary forms, with or without
@@ -32,29 +32,8 @@
 *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
 *****************************************************************************/
-
-#ifndef EXOSITE_HAL_H
-#define EXOSITE_HAL_H
-
-#include <string.h>
-
-// defines
-#define EXOSITE_HAL_SN_MAXLENGTH             25
-#define EXOSITE_HAL_VENDOR_MAXLENGTH         25
-#define EXOSITE_HAL_MODEL_MAXLENGTH          25
-
-// functions for export
-int exoHAL_ReadUUID(unsigned char if_nbr, char * UUID_buf);
-void exoHAL_EnableMeta(void);
-void exoHAL_EraseMeta(void);
-void exoHAL_WriteMetaItem(unsigned char * buffer, unsigned char len, int offset);
-void exoHAL_ReadMetaItem(unsigned char * buffer, unsigned char len, int offset);
-void exoHAL_SocketClose(long socket);
-long exoHAL_SocketOpenTCP(unsigned char *server);
-long exoHAL_ServerConnect(long socket);
-unsigned char exoHAL_SocketSend(long socket, char * buffer, unsigned char len);
-unsigned char exoHAL_SocketRecv(long socket, char * buffer, unsigned char len);
-void exoHAL_MSDelay(unsigned short delay);
-
-#endif
-
+char *itoa(int n, char *s, int b);
+char *strrev(char *str);
+unsigned char atoc(char data);
+unsigned short atoshort(char b1, char b2);
+unsigned char ascii_to_char(char b1, char b2);

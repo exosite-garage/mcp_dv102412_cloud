@@ -12,30 +12,30 @@
 *
 *    Redistributions in binary form must reproduce the above copyright
 *    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the   
+*    documentation and/or other materials provided with the
 *    distribution.
 *
 *    Neither the name of Exosite LLC nor the names of its contributors may
 *    be used to endorse or promote products derived from this software
 *    without specific prior written permission.
 *
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-*  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
-*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+*  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
 *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
 *****************************************************************************/
 #include "exosite_hal.h"
 #include "exosite_meta.h"
 #include "exosite.h"
-#include <string.h>
+#include "../utilities/strlib.h"
 
 //local defines
 #define EXOSITE_MAX_CONNECT_RETRY_COUNT 5
@@ -89,7 +89,7 @@ int Exosite_StatusCode(void);
 // externs
 
 // global variables
-static int status_code = 0;
+static int status_code = EXO_STATUS_END;
 static int exosite_initialized = 0;
 
 
@@ -112,8 +112,6 @@ info_assemble(const char * vendor, const char *model, const char *sn)
   int info_len = 0;
   int assemble_len = 0;
   char * vendor_info = exosite_provision_info;
-
-  memset(exosite_provision_info, 0, EXOSITE_LENGTH);
 
   // verify the assembly length
   assemble_len = strlen(STR_VENDOR) + strlen(vendor)
@@ -198,7 +196,7 @@ Exosite_Init(const char *vendor, const char *model, const unsigned char if_nbr, 
   unsigned char uuid_len = 0;
 
   exosite_meta_init(reset);          //always initialize Exosite meta structure
-  uuid_len = exoHAL_ReadUUID(if_nbr, (unsigned char *)struuid);
+  uuid_len = exoHAL_ReadUUID(if_nbr, struuid);
 
   if (0 == uuid_len)
   {
@@ -223,7 +221,7 @@ Exosite_Init(const char *vendor, const char *model, const unsigned char if_nbr, 
 
   exosite_initialized = 1;
 
-  status_code = EXO_STATUS_INIT_DONE;
+  status_code = EXO_STATUS_OK;
 
   return 1;
 }
@@ -247,10 +245,10 @@ Exosite_Activate(void)
 {
   int length;
   char strLen[5];
-  int newcik = 0;
-  int http_status = 0;
   char *cmp_ss = "Content-Length: 40";
   char *cmp = cmp_ss;
+  int newcik = 0;
+  int http_status = 0;
 
   if (!exosite_initialized) {
     status_code = EXO_STATUS_INIT;
@@ -266,7 +264,7 @@ Exosite_Activate(void)
 
   // Get activation Serial Number
   length = strlen(exosite_provision_info);
-  exoHAL_itoa(strLen, length, 10); //make a string for length
+  itoa(length, strLen, 10); //make a string for length
 
   sendLine(sock, POSTDATA_LINE, "/provision/activate");
   sendLine(sock, HOST_LINE, NULL);
@@ -346,7 +344,7 @@ Exosite_Activate(void)
   exoHAL_SocketClose(sock);
 
   if (0 == http_status)
-    status_code = EXO_STATUS_BAD_RESP;
+    status_code = EXO_STATUS_BAD_TCP;
   if (200 == http_status)
     status_code = EXO_STATUS_OK;
   if (404 == http_status)
@@ -415,7 +413,7 @@ Exosite_SetCIK(char * pCIK)
     return;
   }
   exosite_meta_write((unsigned char *)pCIK, CIK_LENGTH, META_CIK);
-  status_code = EXO_STATUS_CIK_STORED;
+  status_code = EXO_STATUS_OK;
   return;
 }
 
@@ -503,7 +501,7 @@ Exosite_Write(char * pbuf, unsigned char bufsize)
 //  s.send('Content-Length: 6\r\n\r\n')
 //  s.send('temp=2')
 
-  exoHAL_itoa(strBuf, bufsize, 10); //make a string for length
+  itoa((int)bufsize, strBuf, 10); //make a string for length
 
   sendLine(sock, POSTDATA_LINE, "/onep:v1/stack/alias");
   sendLine(sock, HOST_LINE, NULL);
@@ -517,7 +515,7 @@ Exosite_Write(char * pbuf, unsigned char bufsize)
   exoHAL_SocketClose(sock);
 
   if (0 == http_status)
-    status_code = EXO_STATUS_BAD_RESP;
+    status_code = EXO_STATUS_BAD_TCP;
   if (401 == http_status)
   {
     status_code = EXO_STATUS_NOAUTH;
@@ -650,7 +648,7 @@ Exosite_Read(char * palias, char * pbuf, unsigned char buflen)
   exoHAL_SocketClose(sock);
 
   if (0 == http_status)
-    status_code = EXO_STATUS_BAD_RESP;
+    status_code = EXO_STATUS_BAD_TCP;
   if (200 == http_status)
   {
     status_code = EXO_STATUS_OK;

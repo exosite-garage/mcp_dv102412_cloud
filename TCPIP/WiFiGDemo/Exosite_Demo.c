@@ -447,7 +447,7 @@ int show_cloud_status(void)
     tcp_fail_count = 0;
     unknown_status = 0;
   }
-  else if (EXO_STATUS_BAD_TCP == latest_exo_code || EXO_STATUS_BAD_RESP == latest_exo_code)
+  else if (EXO_STATUS_BAD_TCP == latest_exo_code)
   {
     led2_blinking_times = 2;
     led2_delay_timming = 0;
@@ -476,8 +476,7 @@ int show_cloud_status(void)
   else
   {
     if ((TickGet() - network_err_time_tick > TICK_SECOND * 2) &&
-        EXO_STATUS_END != latest_exo_code &&
-        EXO_STATUS_INIT_DONE != latest_exo_code)
+        EXO_STATUS_END != latest_exo_code)
     {
       network_err_time_tick = TickGet();
       unknown_status++;

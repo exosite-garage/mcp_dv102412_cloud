@@ -12,23 +12,23 @@
 *
 *    Redistributions in binary form must reproduce the above copyright
 *    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the   
+*    documentation and/or other materials provided with the
 *    distribution.
 *
 *    Neither the name of Exosite LLC nor the names of its contributors may
 *    be used to endorse or promote products derived from this software
 *    without specific prior written permission.
 *
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-*  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
-*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+*  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
 *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
 *****************************************************************************/
@@ -38,7 +38,6 @@
 #include "TCPIPConfig.h"
 #include "TCPIP Stack/TCPIP.h"
 #include "TCPIP Stack/Helpers.h"
-#include "stdlib.h"
 
 // local variables
 #define EXOMETA_ADDR 0xbd050000
@@ -76,7 +75,7 @@ extern APP_CONFIG AppConfig;
 *
 *****************************************************************************/
 int
-exoHAL_ReadUUID(unsigned char if_nbr, unsigned char * UUID_buf)
+exoHAL_ReadUUID(unsigned char if_nbr, char * UUID_buf)
 {
   int retval = 0;
   MAC_ADDR macbuf;
@@ -394,46 +393,4 @@ exoHAL_SocketRecv(long socket, char * buffer, unsigned char len)
 
   return 0;
 }
-
-
-/*****************************************************************************
-*
-*  exoHAL_MSDelay
-*
-*  \param  delay - milliseconds to delay
-*
-*  \return None
-*
-*  \brief  Delays for specified milliseconds
-*
-*****************************************************************************/
-void
-exoHAL_MSDelay(unsigned short delay)
-{
-
-  return;
-}
-
-/*****************************************************************************
-*
-*  exoHAL_itoa
-*
-*  \param  char *str - convert string
-*          int value - the converted value
-*          int base - define the convert type
-*
-*  \return None
-*
-*  \brief  Delays for specified milliseconds
-*
-*****************************************************************************/
-void
-exoHAL_itoa(char *str, int value, int base)
-{
-  if (base == 10)
-    uitoa(value, (BYTE *)str);
-
-  return;
-}
-
 

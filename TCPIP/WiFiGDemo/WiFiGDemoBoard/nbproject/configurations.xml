@@ -164,6 +164,10 @@
         <itemPath>../../../Microchip/TCPIP Stack/ZeroconfMulticastDNS.c</itemPath>
         <itemPath>../../../Microchip/TCPIP Stack/BigInt_helper_PIC32.S</itemPath>
       </logicalFolder>
+      <logicalFolder name="utilities" displayName="utilities" projectFiles="true">
+        <itemPath>../../../utilities/strlib.c</itemPath>
+        <itemPath>../../../utilities/strlib.h</itemPath>
+      </logicalFolder>
       <logicalFolder name="WiFi" displayName="WiFi" projectFiles="true">
         <itemPath>../../../Microchip/TCPIP Stack/WiFi/WFConnectionAlgorithm.c</itemPath>
         <itemPath>../../../Microchip/TCPIP Stack/WiFi/WFConnectionManager.c</itemPath>
@@ -224,6 +228,7 @@
     <Elem>../../../Microchip/TCPIP Stack</Elem>
     <Elem>../../../Microchip/Include/TCPIP Stack</Elem>
     <Elem>../WifiGDemoWebPages</Elem>
+    <Elem>../../../utilities</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
