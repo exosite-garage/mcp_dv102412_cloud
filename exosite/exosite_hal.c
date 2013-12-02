@@ -43,7 +43,7 @@
 #define EXOMETA_ADDR 0xbd050000
 TCP_SOCKET exSocket = INVALID_SOCKET;
 int wait_count = 0;
-int recv_done = 0;
+int socket_crush = 0;
 int send_count = 0;
 static enum _GenericTCPState
 {
@@ -216,12 +216,12 @@ exoHAL_SocketClose(long socket)
   // Send everything immediately
   if (GenericTCPState == EX_DISCONNECT)
   {
-    if (TCPIsConnected((TCP_SOCKET)socket) && recv_done == 1)
+    if (TCPIsConnected((TCP_SOCKET)exSocket) && socket_crush == 1)
     {
-      TCPClose((TCP_SOCKET)socket);
-      recv_done = 0;
-      socket = INVALID_SOCKET;
+      TCPClose((TCP_SOCKET)exSocket);
+      socket_crush = 0;
       exSocket = INVALID_SOCKET;
+      socket = exSocket;
     }
     send_count = 0;
     GenericTCPState = EX_DONE;
@@ -253,13 +253,11 @@ exoHAL_SocketOpenTCP(unsigned char *server)
   if (GenericTCPState == EX_DONE)
     GenericTCPState = EX_HOME;
 
-  // Start the TCP server, listening on RX_PERFORMANCE_PORT
   if (GenericTCPState == EX_HOME)
   {
     if (exSocket == INVALID_SOCKET)
     {
       exSocket = TCPOpen(serverip, TCP_OPEN_IP_ADDRESS, server_port, TCP_PURPOSE_GENERIC_TCP_CLIENT);
-
       if (exSocket == INVALID_SOCKET)
       {
         return -1;
@@ -287,29 +285,19 @@ exoHAL_ServerConnect(long sock)
 {
   if (GenericTCPState == EX_SOCKET_OBTAINED)
   {
-    if (TCPWasReset((TCP_SOCKET)sock))
-    {
-      recv_done = 1;
-      GenericTCPState = EX_DISCONNECT;
-      wait_count = 0;
-      return -1;
-    }
-
-    if (TCPIsConnected((TCP_SOCKET)sock))
-    {
-      GenericTCPState = EX_PACKAGE_SEND;
-    }
-    else
+    // Wait for the remote server to accept our connection request
+    if (!TCPIsConnected(sock))
     {
       wait_count++;
       if (wait_count > 10)
       {
-        recv_done = 1;
+        socket_crush = 1;
         GenericTCPState = EX_DISCONNECT;
         wait_count = 0;
         return -1;
       }
     }
+    GenericTCPState = EX_PACKAGE_SEND;
   }
 
   return (long)sock;
@@ -334,14 +322,12 @@ exoHAL_SocketSend(long socket, char * buffer, unsigned char len)
 
   if (GenericTCPState == EX_PACKAGE_SEND)
   {
-    int w = TCPIsPutReady((TCP_SOCKET)socket);
-    if(w < len)
-      return send_len;
-
-    send_len = TCPPutArray((TCP_SOCKET)socket, (BYTE *)buffer, len);
+    if (TCPIsPutReady((TCP_SOCKET)exSocket) < len)
+        return -1;
+    send_len = TCPPutArray((TCP_SOCKET)exSocket, (BYTE *)buffer, len);
     send_count ++;
     wait_count = 0;
-    TCPFlush((TCP_SOCKET)socket);
+    socket = (long)exSocket;
   }
 
   return send_len;
@@ -367,26 +353,30 @@ exoHAL_SocketRecv(long socket, char * buffer, unsigned char len)
 
   if (GenericTCPState == EX_PACKAGE_SEND && send_count >= 4)
   {
+    TCPFlush((TCP_SOCKET)exSocket);
     GenericTCPState++;
   }
 
   if (GenericTCPState == EX_PROCESS_RESPONSE)
   {
-    if (!TCPIsGetReady(socket))
+    if (!TCPIsConnected(socket))
     {
       return 0;
     }
-    w = TCPIsGetReady((TCP_SOCKET)socket);
+
+    w = TCPIsGetReady((TCP_SOCKET)exSocket);
+    if (!w)
+        return 0;
     buffer[0] = 0;
     if (w)
     {
       wGetLen = w;
-      TCPGetArray((TCP_SOCKET)socket, (BYTE *)buffer, len);
+      TCPGetArray((TCP_SOCKET)exSocket, (BYTE *)buffer, len);
       if (send_count >= 4 && w < len)
       {
         GenericTCPState = EX_DISCONNECT;
       }
-
+      socket = (long)exSocket;
       return len;
     }
   }

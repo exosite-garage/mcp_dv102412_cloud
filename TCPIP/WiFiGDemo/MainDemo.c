@@ -91,6 +91,7 @@ extern unsigned char TelnetPut(unsigned char c);
 extern void Exosite_Demo(void);
 extern void Store_App_Config(void);
 extern int button_state;
+extern int cloud_mode;
 
 UINT8 g_scan_done = 0;        // WF_PRESCAN   This will be set wheneven event scan results are ready.
 UINT8 g_prescan_waiting = 1;  // WF_PRESCAN   This is used only to allow POR prescan once.
@@ -143,6 +144,7 @@ int main(void)
 
     // Initialize TCP/IP stack timer
     TickInit();
+    demo_TickInit();
 
     #if defined(STACK_USE_MPFS2)
     // Initialize the MPFS File System
@@ -302,7 +304,7 @@ int main(void)
         #endif // EZ_CONFIG_STORE
 		
         // Blink LED0 twice per sec when unconfigured, once per sec after config
-        if((TickGet() - t >= TICK_SECOND/(4ul - (CFGCXT.isWifiDoneConfigure*2ul))))
+        if((TickGet() - t >= TICK_SECOND/(4ul - (CFGCXT.isWifiDoneConfigure*3ul))))
         {
             t = TickGet();
             LED0_INV();
@@ -314,7 +316,8 @@ int main(void)
         StackTask();
 
         // This task invokes each of the core stack application tasks
-        StackApplications();
+        if (cloud_mode == 0)
+          StackApplications();
 
         // Enable WF_USE_POWER_SAVE_FUNCTIONS 
         WiFiTask();
@@ -466,7 +469,7 @@ static void InitAppConfig(void)
 		
 		#if defined(WF_CS_TRIS)
 			// Load the default SSID Name
-			WF_ASSERT(sizeof(MY_DEFAULT_SSID_NAME) <= sizeof(AppConfig.MySSID));
+			WF_ASSERT(sizeof(MY_DEFAULT_SSID_NAME)-1 <= sizeof(AppConfig.MySSID));
 			memcpypgm2ram(AppConfig.MySSID, (ROM void*)MY_DEFAULT_SSID_NAME, sizeof(MY_DEFAULT_SSID_NAME));
 			AppConfig.SsidLength = sizeof(MY_DEFAULT_SSID_NAME) - 1;
 			AppConfig.SecurityMode = MY_DEFAULT_WIFI_SECURITY_MODE;

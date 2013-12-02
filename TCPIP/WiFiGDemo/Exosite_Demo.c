@@ -38,6 +38,7 @@
 
 //local defines
 int unknown_status = 0;
+int demoApp_timer = 3;
 
 // local functions
 int button_monitor(void);
@@ -46,14 +47,97 @@ int heart_beat_report(void);
 int update_dev_ip(void);
 void status_led1_handler(int count);
 int status_led2_handler(int count, int delay);
-int show_cloud_status(void);
+void show_cloud_status(void);
 int wifi_fw_detect(void);
 int task_delay(int delay_time, int count);
-void check_cloud_activated(void);
+int check_cloud_activated(void);
 
 // externs
 
 // global variables
+
+
+/*****************************************************************************
+*
+*  demo_TickInit
+*
+*  \param  None
+*
+*  \return  None
+*
+*  \brief  Demo timer tick init
+*
+*****************************************************************************/
+void demo_TickInit(void)
+{
+  // Use Timer 1 for 16-bit and 32-bit processors
+  // 1:256 prescale
+  T2CONbits.TCKPS = 3;
+  // Base
+  PR2 = 0xFFFF;
+  // Clear counter
+  TMR2 = 0;
+
+  // Enable timer interrupt
+  IPC2bits.T2IP = 2;	// Interrupt priority 2 (low)
+  IFS0CLR = _IFS0_T2IF_MASK;
+  IEC0SET = _IEC0_T2IE_MASK;
+
+  // Start timer
+  T2CONbits.TON = 1;
+}
+
+
+/*****************************************************************************
+*
+*  demo_tick_handler
+*
+*  \param  None
+*
+*  \return  None
+*
+*  \brief  Demo timer tick handler
+*
+*****************************************************************************/
+void demo_tick_handler(void)
+{
+  if (cloud_mode < 1)
+    return;
+
+  if (led2_blinky_count > 0 && led2_count_rate > 0)
+  {
+    show_next = 0;
+    if (demo_tick % (SEC_RATE / led2_count_rate) == 0)
+    {
+      LED2_INV();
+      led2_blinky_count --;
+    }
+  } else if (led2_blinky_count == 0)
+    if (demo_tick % (SEC_RATE * 2) == 0)
+      show_next = 1;
+}
+
+
+/*****************************************************************************
+*
+*  _T2Interrupt
+*
+*  \param  None
+*
+*  \return  None
+*
+*  \brief  Timer 2 Interrupt
+*
+*****************************************************************************/
+void __attribute((interrupt(ipl2), vector(_TIMER_2_VECTOR), nomips16)) _T2Interrupt(void)
+{
+  // Increment internal high tick counter
+  demo_tick++;
+  demo_tick_handler();
+
+  // Reset interrupt flag
+  IFS0CLR = _IFS0_T2IF_MASK;
+}
 
 
 /*****************************************************************************
@@ -132,19 +216,19 @@ void Erase_App_Config(void)
 *****************************************************************************/
 void Store_App_Config(void)
 {
-  _store_app_temp app_temp;
-  _store_app_temp app_temp_verify;
-  memcpy(app_temp.MySSID, AppConfig.MySSID, 32);
-  memcpy(app_temp.SecurityKey, AppConfig.SecurityKey, 64);
-  app_temp.SecurityKeyLength = AppConfig.SecurityKeyLength;
-  app_temp.SecurityMode = AppConfig.SecurityMode;
-  app_temp.dataValid = AppConfig.dataValid;
-  app_temp.networkType = AppConfig.networkType;
-  app_temp.saveSecurityInfo = AppConfig.saveSecurityInfo;
+  _store_ap_temp ap_temp;
+  _store_ap_temp ap_temp_verify;
+  memcpy(ap_temp.MySSID, AppConfig.MySSID, 32);
+  memcpy(ap_temp.SecurityKey, AppConfig.SecurityKey, 64);
+  ap_temp.SecurityKeyLength = AppConfig.SecurityKeyLength;
+  ap_temp.SecurityMode = AppConfig.SecurityMode;
+  ap_temp.dataValid = AppConfig.dataValid;
+  ap_temp.networkType = AppConfig.networkType;
+  ap_temp.saveSecurityInfo = AppConfig.saveSecurityInfo;
 
-  Exosite_GetMRF((char *)&app_temp_verify, sizeof(_store_app_temp));
-  if (strncmp((char *)app_temp_verify.MySSID, (char *)app_temp.MySSID, 32) &&
-     strncmp((char *)app_temp_verify.SecurityKey, (char *)app_temp.SecurityKey, 64))
+  Exosite_GetMRF((char *)&ap_temp_verify, sizeof(_store_ap_temp));
+  if (strncmp((char *)ap_temp_verify.MySSID, (char *)ap_temp.MySSID, 32) &&
+     strncmp((char *)ap_temp_verify.SecurityKey, (char *)ap_temp.SecurityKey, 64))
   {
     char tmpCIK[40];
     char backupCIK = 0;
@@ -159,7 +243,7 @@ void Store_App_Config(void)
     if (backupCIK == 1)
       Exosite_SetCIK(tmpCIK);
 
-    Exosite_SetMRF((char *)&app_temp, sizeof(_store_app_temp));
+    Exosite_SetMRF((char *)&ap_temp, sizeof(_store_ap_temp));
 
     setup_wifi = 1;
     // blinking twice second
@@ -184,9 +268,9 @@ void Store_App_Config(void)
 *****************************************************************************/
 void Load_App_Config(void)
 {
-  _store_app_temp temp;
+  _store_ap_temp temp;
 
-  Exosite_GetMRF((char *)&temp, sizeof(_store_app_temp));
+  Exosite_GetMRF((char *)&temp, sizeof(_store_ap_temp));
   if (temp.MySSID[0] == 0x00 || temp.MySSID[0] == 0xff)
     return;
 
@@ -378,46 +462,6 @@ void status_led1_handler(int count)
 
 /*****************************************************************************
 *
-*  status_led2_handler
-*
-*  \param  int count, int delay
-*
-*  \return  0 - count end, 1 - counting
-*
-*  \brief  Handles LED2
-*
-*****************************************************************************/
-int status_led2_handler(int count, int delay)
-{
-  if (count == 0)
-    return 0;
-
-  if (delay == 0)
-    delay = 5;
-
-  if (TickGet() - led2_time_tick > TICK_SECOND / delay)
-  {
-    led2_time_tick = TickGet();
-    if (led2_delay_count < (count * 2))
-    {
-      LED2_INV();
-      led2_delay_count++;
-    }
-  }
-
-  if (led2_delay_count >= (count * 2))
-  {
-    led2_delay_count = 0;
-    LED2_IO = 0;
-    return 0;
-  }
-
-  return 1;
-}
-
-
-/*****************************************************************************
-*
 *  show_cloud_status
 *
 *  \param  None
@@ -427,40 +471,27 @@ int status_led2_handler(int count, int delay)
 *  \brief  Indicates cloud status per second
 *
 *****************************************************************************/
-int show_cloud_status(void)
+void show_cloud_status(void)
 {
-  int status = 0;
-  int led2_blinking_times = 0;
-  int led2_delay_timming = 0;
+  if (show_next == 0)
+    return;
 
-  if (TickGet() - cloudstatus_time_tick > TICK_SECOND * 2)
-  {
-    cloudstatus_time_tick = TickGet();
-    if (0 != cloudstatus_time_tick && EXO_STATUS_END == latest_exo_code)
-      latest_exo_code = Exosite_StatusCode();
-  }
+  latest_exo_code = Exosite_StatusCode();
 
   if (EXO_STATUS_OK == latest_exo_code)
   {
-    led2_blinking_times = 1;
-    led2_delay_timming = 0;
+    led2_blinky_count = 1 * 2;
     tcp_fail_count = 0;
     unknown_status = 0;
   }
   else if (EXO_STATUS_BAD_TCP == latest_exo_code)
   {
-    led2_blinking_times = 2;
-    led2_delay_timming = 0;
-    if (TickGet() - network_err_time_tick > TICK_SECOND * 2)
-    {
-      network_err_time_tick = TickGet();
-      tcp_fail_count++;
-    }
+    led2_blinky_count = 2 * 2;
+    tcp_fail_count++;
   }
   else if (EXO_STATUS_BAD_SN == latest_exo_code)
   {
-    led2_blinking_times = 3;
-    led2_delay_timming = 0;
+    led2_blinky_count = 3 * 2;
     tcp_fail_count = 0;
     unknown_status = 0;
   }
@@ -468,34 +499,18 @@ int show_cloud_status(void)
           EXO_STATUS_NOAUTH == latest_exo_code ||
           EXO_STATUS_CONFLICT == latest_exo_code)
   {
-    led2_blinking_times = 4;
-    led2_delay_timming = 0;
+    led2_blinky_count = 4 * 2;
     tcp_fail_count = 0;
     unknown_status = 0;
   }
   else
   {
-    if ((TickGet() - network_err_time_tick > TICK_SECOND * 2) &&
-        EXO_STATUS_END != latest_exo_code)
-    {
-      network_err_time_tick = TickGet();
-      unknown_status++;
-    }
+    led2_blinky_count = 0;
+    unknown_status++;
   }
+  led2_count_rate = led2_blinky_count / 2;
 
-  if (EXO_STATUS_END != latest_exo_code)
-  {
-    status = status_led2_handler(led2_blinking_times, led2_delay_timming);
-    //cleaning
-    if (status == 0)
-    {
-      led2_blinking_times = 0;
-      led2_delay_timming = 0;
-      latest_exo_code = EXO_STATUS_END;
-    }
-  }
-
-  return status;
+  return;
 }
 
 
@@ -513,20 +528,27 @@ int show_cloud_status(void)
 int wifi_fw_detect(void)
 {
 #if defined(MRF24WG)
+  int i = 0;
+  int fm_cnt = 0;
   if (once_init == 0)
   {
     tWFDeviceInfo deviceInfo;
-    int state = 1;
+
+    LED2_IO = 0;
     WF_GetDeviceInfo(&deviceInfo);  // only call this once, not continually
     if (deviceInfo.romVersion == 0x30)
-      state = status_led2_handler(2, 0);
+      fm_cnt = 4;
     else if (deviceInfo.romVersion == 0x31)
-      state = status_led2_handler(4, 0);
+      fm_cnt = 8;
     else
-      state = status_led2_handler(6, 0);
-    if (state == 0)
+      fm_cnt = 12;
+
+    once_init = 1;
+
+    for (i = 0; i < fm_cnt; i++)
     {
-      once_init = 1;
+      LED2_INV();
+      DelayMs(200);
     }
   }
 #endif
@@ -609,35 +631,31 @@ check_network_connected(void)
 *
 *  \param  None
 *
-*  \return  None
+*  \return  0 - activate fail, 1 - activate success
 *
 *  \brief  Checks cloud status is activated
 *
 *****************************************************************************/
-void check_cloud_activated(void)
+int check_cloud_activated(void)
 {
   int activate_status = 0;
 
   if (nvmram_verify != 0)
   {
     // 1) backup WiFi config 2) erases Exosite meta 3) set WiFi config in flash
-    _store_app_temp app_temp;
-    Exosite_GetMRF((char *)&app_temp, sizeof(_store_app_temp));
+    _store_ap_temp ap_temp;
+    Exosite_GetMRF((char *)&ap_temp, sizeof(_store_ap_temp));
     Exosite_Init("microchip", "dv102412", IF_WIFI, 1);
-    Exosite_SetMRF((char *)&app_temp, sizeof(_store_app_temp));
+    Exosite_SetMRF((char *)&ap_temp, sizeof(_store_ap_temp));
     nvmram_verify = 0;
   }
 
   if (nvmram_verify == 0)
   {
     activate_status = Exosite_Activate();
-    if (activate_status)
-      badcik = 0;
-    else
-      badcik = 1;
   }
 
-  return;
+  return activate_status;
 }
 
 
@@ -654,45 +672,67 @@ void check_cloud_activated(void)
 *****************************************************************************/
 void Exosite_Demo(void)
 {
-  int workon_demo = 0;
   if (!check_network_connected())
+  {
+    cloud_mode = 0;
     return;
+  }
+  cloud_mode = 1;
 
   // worked on demo app every 1/3 second
-  if (task_delay(TICK_SECOND / 3, 1))
-    workon_demo = 1;
+  if (!task_delay(TICK_SECOND * 5 / demoApp_timer, 1))
+    return;
 
-  if (workon_demo)
+  int code = Exosite_StatusCode();
+  if (EXO_STATUS_BAD_CIK == code || EXO_STATUS_NOAUTH == code || cloud_status == -1)
   {
-    int code = Exosite_StatusCode();
-    if (EXO_STATUS_BAD_CIK == code || EXO_STATUS_NOAUTH == code || badcik == 1)
-    {
-      badcik = 1;
-      check_cloud_activated();
-    }
+    if (check_cloud_activated() == 0)
+      cloud_status = -1;
     else
+      cloud_status = 0;
+  }
+  else
+  {
+    if (CLOUD_HOME == cloud_status)
     {
-      if (CLOUD_HOME == cloud_status)
+      nvmram_verify = 1; // when you want to provision again, you should verify the nvram
+      if (update_dev_ip())
       {
-        nvmram_verify = 1; // when you want to provision again, you should verify the nvram
-        if (update_dev_ip())
-          cloud_status++;
+        cloud_status++;
+        demoApp_timer = 1;
       }
-      else if (CLOUD_READING == cloud_status)
+      else
+        demoApp_timer = 5;
+    }
+    else if (CLOUD_READING == cloud_status)
+    {
+      if (read_command())
       {
-        if (read_command())
-          cloud_status++;
+        cloud_status++;
+        demoApp_timer = 1;
       }
-      else if (CLOUD_WRITING == cloud_status)
+      else
+        demoApp_timer = 5;
+    }
+    else if (CLOUD_WRITING == cloud_status)
+    {
+      if (heart_beat_report())
       {
-        if (heart_beat_report())
-          cloud_status++;
+        cloud_status++;
+        demoApp_timer = 1;
       }
-      else if (CLOUD_BUTTON_STATUS_UPDATE == cloud_status)
+      else
+        demoApp_timer = 5;
+    }
+    else if (CLOUD_BUTTON_STATUS_UPDATE == cloud_status)
+    {
+      if (button_monitor())
       {
-        if (button_monitor())
-          cloud_status = CLOUD_READING;
+        cloud_status = CLOUD_READING;
+        demoApp_timer = 1;
       }
+      else
+        demoApp_timer = 5;
     }
   }
 
