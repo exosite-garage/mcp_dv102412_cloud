@@ -269,6 +269,7 @@ void WF_TxPowerGetMinMax(INT8 *p_minTxPower, INT8 *p_maxTxPower)
     Fix transmission rate with maximum power for MRF24WB0MA/B. 
 
   Description:
+    Fix transmission rate with maximum power for MRF24WB0MA/B. 
 
   Precondition:
     MACInit must be called first.
@@ -280,7 +281,8 @@ void WF_TxPowerGetMinMax(INT8 *p_minTxPower, INT8 *p_maxTxPower)
      None.
       
   Remarks:
-     None.
+     This function can be used by MRF24WG0M to fix transmission rates too.
+     The input parameter is 2 * rate. Eg for 11Mbps, set input parameter as 22.
   *****************************************************************************/  
 void WF_FixTxRateWithMaxPower(BOOL oneMegaBps)
 { 

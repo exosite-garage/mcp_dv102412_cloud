@@ -137,11 +137,21 @@ static BOOL WF_CMIsHostScanAllowed(void)
     Operation results. Success or Failure
       
   Remarks:
-    None.
+    Host scan is allowed only in idle or connected state. 
+    If MRF24W FW is in the midst of connection ( or reconnection) process, then
+    host scan can hammer connection process, and furthermore it may cause
+    fatal failure in MRF24W FW operation. To use host scan, we strongly
+    recommend the user to disable MRF24W FW connection manager by enabling
+    #define DISABLE_MODULE_FW_CONNECT_MANAGER_IN_INFRASTRUCTURE    
+    in WF_Config.h
   *****************************************************************************/
 UINT16 WF_Scan(UINT8 CpId)
 {
     UINT8   hdr[4];
+#ifndef MRF24WG
+    UINT8   connectionState;
+    UINT8   dummy;
+#endif
 
     /* WARNING !!! : 
     * Host scan is allowed only in idle or connected state. 
@@ -154,6 +164,12 @@ UINT16 WF_Scan(UINT8 CpId)
     */
     if (!WF_CMIsHostScanAllowed())    
         return WF_ERROR_OPERATION_CANCELLED;
+
+#ifndef MRF24WG
+    WF_CMGetConnectionState(&connectionState, &dummy);
+    if (connectionState == WF_CSTATE_NOT_CONNECTED)
+        WF_CMConnect(0xff); /* 120c host scan bug workaround */
+#endif
     
     hdr[0] = WF_MGMT_REQUEST_TYPE;
     hdr[1] = WF_SCAN_START_SUBTYPE; 
@@ -167,7 +183,7 @@ UINT16 WF_Scan(UINT8 CpId)
 
     /* wait for mgmt response, free it after it comes in (no data needed) */
     WaitForMgmtResponse(WF_SCAN_START_SUBTYPE, FREE_MGMT_BUFFER); 
-
+    
     return WF_SUCCESS;
 }
 
@@ -197,9 +213,17 @@ UINT16 WF_Scan(UINT8 CpId)
     None.
       
   Remarks:
-     p_scanResult->rssi contains signal strength RSSI.
-     MRF24WB : RSSI_MAX (200) , RSSI_MIN (106).
-     MRF24WG : RSSI_MAX (128) , RSSI_MIN (43).
+      RSSI can only be obtained from the scan results p_scanResult->rssi. 
+      MRF24W checks out the signal strength from the preamble of the incoming packets. 
+      The higher the values, the stronger is the received signal strength. 
+
+      p_scanResult->rssi contains received signal strength indicator (RSSI).
+      * MRF24WB : RSSI_MAX (200) , RSSI_MIN (106).
+      * MRF24WG : RSSI_MAX (128) , RSSI_MIN (43).
+  
+       The RSSI value is not directly translated to dbm because this is not calibrated number. 
+       However, as a guideline, MAX(200) corresponds to 0 dbm, MIN (106) corresponds to -94 dbm. 
+  
   *****************************************************************************/
 void WF_ScanGetResult(UINT8          listIndex, 
                        tWFScanResult  *p_scanResult)

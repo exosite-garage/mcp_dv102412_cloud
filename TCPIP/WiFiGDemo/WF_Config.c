@@ -317,9 +317,7 @@ void WF_ProcessEvent(UINT8 event, UINT16 eventInfo, UINT8 *extraInfo)
                 		break;
 				
 			default:
-                            #if defined ( EZ_CONFIG_STORE )
 				WF_ASSERT(FALSE);  /* unknown event */
-                            #endif
 				break;
 		}		 
 		

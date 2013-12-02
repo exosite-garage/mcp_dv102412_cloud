@@ -62,14 +62,17 @@
 //                  _EXTERNAL_1_VECTOR  = MRF24W_IN_SPI1
 // #define WF_INT_VECTOR       _EXTERNAL_1_VECTOR
 
-#define WF_EASY_CONFIG_DEMO
+//#define WF_EASY_CONFIG_DEMO  // Iperf
 
 //
 // Release history
 // ==================
 // v1.02 :  March 2013        Initial release. Starts up as softAP. Functionality close to EZConfig.
-//
-#define DEMO_VERSION        "v1.02"
+// v1.03 :  June   2013        Changes to multiple WiFi-related files to Demo/WiFi Console / EZConfig projects. 
+//                                      Since WiFi G Demo shares a lot of these common WiFi source files, revision change 
+//                                      to keep track of June 2013 release.
+//                                             
+#define DEMO_VERSION        "v1.03"
 
 
 /*= WF_CONSOLE =======================================================================*/

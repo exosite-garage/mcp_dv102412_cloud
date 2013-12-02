@@ -1039,6 +1039,7 @@ void WF_CAGetDeauthAction(UINT8 *p_deauthAction)
 
   Description:
     Sets the Channel List used by the Connection Algorithm.
+    MRF24W is programmed with channel 1 to 11 as default. 
 
   Precondition:
     MACInit must be called first. 
@@ -1617,6 +1618,29 @@ static void LowLevel_CAGetElement(UINT8 elementId,
     }                                                    
 }
 
+/*******************************************************************************
+  Function:    
+    void WF_DisableModuleConnectionManager(void)
+
+  Summary:
+    When compilation flag DISABLE_MODULE_FW_CONNECT_MANAGER_IN_INFRASTRUCTURE
+    is enabled, this will disable MRF24W connection manager.
+
+  Description:
+    Disable MRF24W connection manager.
+    
+  Precondition:
+    MACInit must be called first.
+
+  Parameters:
+    None.
+
+  Returns:
+    None.
+      
+  Remarks:
+    None.
+ *****************************************************************************/
 void WF_DisableModuleConnectionManager(void)
 {
     WF_CASetListRetryCount(0 /* MY_DEFAULT_LIST_RETRY_COUNT */);

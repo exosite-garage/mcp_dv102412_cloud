@@ -206,9 +206,9 @@ void WF_SetLinkDownThreshold(UINT8 threshold)
 
   Parameters:
     mode - Tx rate 
-             WF_TXMODE_G_RATES (default) -- will use all 802.11g rates
-             WF_TXMODE_B_RATES           -- will only use 802.11b rates
-             WF_TXMODE_LEGACY_RATES      -- will only use 1 and 2 mbps rates 
+             * WF_TXMODE_G_RATES (default) -- will use all 802.11g rates
+             * WF_TXMODE_B_RATES           -- will only use 802.11b rates
+             * WF_TXMODE_LEGACY_RATES      -- will only use 1 and 2 mbps rates 
 
   Returns:
     None.
@@ -290,8 +290,8 @@ void WFEnableBroadcastProbeResponse(void)
 
   Description:
    Retrieves RF module information. 
-   MRF24WB will have romVersion = 0x12.
-   MRF24WG will have romVersion = 0x30 or 0x31.
+   * MRF24WB will have romVersion = 0x12.
+   * MRF24WG will have romVersion = 0x30 or 0x31.
    
   Precondition:
     MACInit must be called first.
@@ -369,6 +369,7 @@ void WF_SetMacAddress(UINT8 *p_mac)
     Retrieves the MRF24W MAC address
 
   Description:
+   Retrieves the MRF24W MAC address
 
   Precondition:
     MACInit must be called first.
@@ -407,12 +408,13 @@ void WF_GetMacAddress(UINT8 *p_mac)
     This function allows the application to configure up to two Multicast 
     Address Filters on the MRF24W.  If two active multicast filters are set 
     up they are OR’d together – the MRF24W will receive and pass to the Host 
-    CPU received packets from either multicast address.  
-    The allowable values in p_config are:
+    CPU received packets from either multicast address. 
+    The allowable values in p_config (tWFMultiCastConfig / WFMulticastConfigStruct) 
+    are:
     
-    filterId -- WF_MULTICAST_FILTER_1 or WF_MULTICAST_FILTER_2
+    * filterId -- WF_MULTICAST_FILTER_1 or WF_MULTICAST_FILTER_2
     
-    action   -- WF_MULTICAST_DISABLE_ALL (default) 
+    * action   -- WF_MULTICAST_DISABLE_ALL (default) 
                    The Multicast Filter discards all received 
                    multicast messages – they will not be forwarded 
                    to the Host PIC.  The remaining fields in this 
@@ -428,12 +430,12 @@ void WF_GetMacAddress(UINT8 *p_mac)
                    structure configure which Multicast messages are forwarded to 
                    the Host PIC.
                    
-    macBytes -- Array containing the MAC address to filter on (using the destination 
+    * macBytes -- Array containing the MAC address to filter on (using the destination 
                 address of each incoming 802.11 frame).  Specific bytes with the 
                 MAC address can be designated as ‘don’t care’ bytes.  See macBitMask.
                 This field in only used if action = WF_MULTICAST_USE_FILTERS.
                 
-    macBitMask -- A byte where bits 5:0 correspond to macBytes[5:0].  If the bit is 
+    * macBitMask -- A byte where bits 5:0 correspond to macBytes[5:0].  If the bit is 
                   zero then the corresponding MAC byte must be an exact match for the 
                   frame to be forwarded to the Host PIC.  If the bit is one then the 
                   corresponding MAC byte is a ‘don’t care’ and not used in the 
@@ -461,7 +463,7 @@ void WF_GetMacAddress(UINT8 *p_mac)
     None.
       
   Remarks:
-    None.
+    Definition WF_USE_MULTICAST_FUNCTIONS needs to be enabled.
  *****************************************************************************/
  void WF_MulticastSetConfig(tWFMultiCastConfig *p_config)
 {
@@ -520,12 +522,12 @@ void WF_GetMacAddress(UINT8 *p_mac)
     msg manually to not require a large stack allocation to hold all the data.                                                                                  
     
     Exact format of management message stored on device is:                                                                
-    [0]     -- always mgmt response (2)
-    [1]     -- always WF_GET_PARAM_SUBTYPE (16)
-    [2]     -- result (1 if successful)
-    [3]     -- mac state (not used)
-    [4]     -- data length (length of response data starting at index 6)
-    [5]     -- not used
+    [0] -- always mgmt response (2)
+    [1] -- always WF_GET_PARAM_SUBTYPE (16)
+    [2] -- result (1 if successful)
+    [3] -- mac state (not used)
+    [4] -- data length (length of response data starting at index 6)
+    [5] --  not used
     
     [6-11]  -- Compare Address 0 address
     [12]    -- Compare Address 0 group
@@ -576,7 +578,7 @@ void WF_GetMacAddress(UINT8 *p_mac)
     None.
       
   Remarks:
-    None.
+    Definition WF_USE_MULTICAST_FUNCTIONS needs to be enabled.
  *****************************************************************************/
 void WF_MulticastGetConfig(UINT8 filterId, tWFMultiCastConfig *p_config)
 {
@@ -668,28 +670,13 @@ void WF_GetTxDataConfirm(UINT8 *p_txDataConfirm)
     void WF_SetRegionalDomain(UINT8 regionalDomain)
 
   Summary:
-    Enables or disables the MRF24W Regional Domain. For MRF24WG with RF module FW version 0x3106 
-    or earlier, it allows enabling /disabling the Regional Domain. For MRF24WG with RF module FW version
-    0x3107 and future releases, this function is NOT supported due to changes in FCC requirements, 
-    which does not allow programming of the regional domain. 
+     Enables or disables the MRF24W Regional Domain. This function is NOT supported 
+     due to FCC requirements, which does not allow programming of the regional domain. 
 
   Description:
-    (MRF24WG 0x3106 or earlier ) Sets the regional domain on the MRF24WG.  Note that this function does not 
-                                                overwrite the factory-set regional domain in FLASH.  By default the 
-                                                MRF24W will use the factory-set regional domain.  It is invalid to call 
-                                                this function while in a connected state.
-    (MRF24WG 0x3107 and future) Not supported.
-    
-    Valid values for the regional domain are:
-    * WF_DOMAIN_FCC     
-    * WF_DOMAIN_IC (MRF24WB)      
-    * WF_DOMAIN_ETSI    
-    * WF_DOMAIN_SPAIN (MRF24WB)     
-    * WF_DOMAIN_FRANCE (MRF24WB)  
-    * WF_DOMAIN_JAPAN_A (MRF24WB)  
-    * WF_DOMAIN_JAPAN_B (MRF24WB)  
-    * WF_DOMAIN_JAPAN     (MRF24WG)  
-    * WF_DOMAIN_OTHER    (MRF24WG) 
+    MRF24W is programmed with FCC regional domain as default. 
+    To cater for other regional domains, use WF_CASetChannelList()
+     to set up specific channels. 
 
   Precondition:
     MACInit must be called first.  This function must not be called while in a
@@ -714,19 +701,11 @@ void WF_SetRegionalDomain(UINT8 regionalDomain)
     void WF_GetRegionalDomain(UINT8 *p_regionalDomain)
 
   Summary:
-    Retrieves the MRF24W Regional domain
+    Retrieves the MRF24W Regional domain.
 
   Description:
-    Gets the regional domain on the MRF24W.  Allowable values are:
-    * WF_DOMAIN_FCC     
-    * WF_DOMAIN_IC (MRF24WB)      
-    * WF_DOMAIN_ETSI    
-    * WF_DOMAIN_SPAIN (MRF24WB)   
-    * WF_DOMAIN_FRANCE (MRF24WB)   
-    * WF_DOMAIN_JAPAN_A (MRF24WB) 
-    * WF_DOMAIN_JAPAN_B (MRF24WB) 
-    * WF_DOMAIN_JAPAN     (MRF24WG)  
-    * WF_DOMAIN_OTHER    (MRF24WG) 
+    Gets the regional domain on the MRF24W.  
+    MRF24W is programmed with FCC regional domain as default. 
 
   Precondition:
     MACInit must be called first.
@@ -845,7 +824,12 @@ void WF_SetRtsThreshold(UINT16 rtsThreshold)
   Description:
      DERIVE_KEY_FROM_PASSPHRASE_IN_HOST must be enabled. Applicable for MRF24WG0M only.
      This function is used only for WF_SECURITY_WPS_PUSH_BUTTON and WF_SECURITY_WPS_PIN
-     security mode. Allows host to convert pass phrase to key in WPS WPA/WPA2-PSK
+     security mode. Allows host (eg PIC32) to convert pass phrase to key in WPS WPA/WPA2-PSK. 
+     The SW process flow is like this: WF_YieldPassphrase2Host() will inform MRF24W that host 
+     wants to do conversion. MRF24W will then generate an event (WF_EVENT_KEY_CALCULATION_REQUEST) 
+     to host and set g_WpsPassphrase.valid to TRUE. Upon receipt of this event, the host will execute 
+     the function WF_ConvPassphrase2Key() to convert the passphrase to key. Upon completion of this 
+     conversion, the host will call WF_SetPSK() to pass the converted key to MRF24W.
 
   Precondition:
     MACInit must be called first.
@@ -875,7 +859,7 @@ void WF_YieldPassphrase2Host(void)
 
   Description:
      DERIVE_KEY_FROM_PASSPHRASE_IN_HOST must be enabled. Applicable for MRF24WG0M only.
-     Sends PSK to module FW in WPS mode.
+     Sends PSK to MRF24W FW in WPS mode.
 
   Precondition:
     MACInit must be called first.
@@ -959,7 +943,7 @@ void WF_GetRtsThreshold(UINT16 *p_rtsThreshold)
     None.
       
   Remarks:
-    None.
+    Definition WF_USE_MULTICAST_FUNCTIONS needs to be enabled.
   *****************************************************************************/
 void WF_SetMultiCastFilter(UINT8 multicastFilterId,
                            UINT8 multicastAddress[6])
@@ -1004,7 +988,7 @@ void WF_SetMultiCastFilter(UINT8 multicastFilterId,
     Forces the module FW to use software filter instead of hardware filter
 
   Description:
-    This function allows the application to configure up to max 16 Multicast 
+    This function allows the application to configure up to max 16 software-based Multicast 
     Address Filters on the MRF24WG0MA/B. 
     
   Precondition:
@@ -1017,7 +1001,7 @@ void WF_SetMultiCastFilter(UINT8 multicastFilterId,
     None.
       
   Remarks:
-    None.
+    Definition ENABLE_SOFTWARE_MULTICAST_FILTER needs to be enabled.
   *****************************************************************************/
 void WF_EnableSWMultiCastFilter(void)
 {
@@ -1036,7 +1020,7 @@ void WF_EnableSWMultiCastFilter(void)
   Description:
     Returns MAC statistics on number of frames received or transmitted for defined situations
     such as number of frames transmitted with multicast bit set in destination MAC address.
-    Refer to WFApi.h for data struct tWFMacStats.
+    Refer to WFApi.h for data struct WFMacStatsStruct / tWFMacStats.
     
   Precondition:
     MACInit must be called first.

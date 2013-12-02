@@ -245,7 +245,10 @@ void WaitForMgmtResponse(UINT8 expectedSubtype, UINT8 freeAction)
                 putrsUART("No stored scan results\r\n");
             #endif
         } else {
-            WF_ASSERT(hdr.result == WF_SUCCESS); 
+            if (!(hdr.result == WF_ERROR_CP_INVALID_PROFILE_ID && hdr.subtype == WF_CM_CONNECT_SUBYTPE)) {
+                /* 120c host scan bug workaround */
+                WF_ASSERT(hdr.result == WF_SUCCESS); 
+            }
         }
 
         /* free mgmt buffer */

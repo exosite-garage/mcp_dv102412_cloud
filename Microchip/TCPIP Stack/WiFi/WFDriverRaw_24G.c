@@ -304,6 +304,7 @@ BOOL AllocateMgmtTxBuffer(UINT16 bytesNeeded)
 {
     UINT16 bufAvail;
     UINT16 byteCount;
+    //char st[80];
 
     /* get total bytes available for MGMT tx memory pool */
     bufAvail = Read16BitWFRegister(WF_HOST_WFIFO_BCNT1_REG) & 0x0fff; /* LS 12 bits contain length */                    
@@ -313,17 +314,25 @@ BOOL AllocateMgmtTxBuffer(UINT16 bytesNeeded)
     {
         /* allocate and create the new Mgmt Tx buffer */
         byteCount = RawMove(RAW_MGMT_TX_ID, RAW_MGMT_POOL, TRUE, bytesNeeded);
-        WF_ASSERT(byteCount != 0);
-        return TRUE;
+        if (byteCount == 0)     // something wrong - we failed to complete the move
+        {
+            //putrsUART("AllocateMgmtTxBuffer: something wrong -- RawMove failed to complete mgmt Tx. deallocate RAW_MGMT_TX_ID, RAW_MGMT_POOL\r\n");
+            return FALSE;
+        }
+        else
+            return TRUE;
     }
     /* else not enough bytes available at this time to satisfy request */
     else
     {
         /* if we allocated some bytes, but not enough, then dealloacate what was allocated */
-        if (bufAvail > 0)
-        {
-            RawMove(RAW_MGMT_RX_ID, RAW_MGMT_POOL, FALSE, 0);
-        }    
+        //if (bufAvail > 0)
+        //{
+        //    RawMove(RAW_MGMT_RX_ID, RAW_MGMT_POOL, FALSE, 0);
+        //}
+
+        //sprintf(st,"AllocateMgmtTxBuffer: failed to allocate memory, bufAvail=%d, bytesNeeded=%d\r\n",bufAvail,bytesNeeded);
+        //putrsUART(st);
         return FALSE;
     }
 }    
@@ -383,6 +392,7 @@ BOOL AllocateDataTxBuffer(UINT16 bytesNeeded)
 {
     UINT16 bufAvail;
     UINT16 byteCount;
+    //char st[80];
     
     WF_ASSERT(GetRawWindowState(RAW_DATA_TX_ID) != WF_RAW_DATA_MOUNTED);
     
@@ -398,16 +408,24 @@ BOOL AllocateDataTxBuffer(UINT16 bytesNeeded)
     {
         /* allocate and create the new Tx buffer (mgmt or data) */
         byteCount = RawMove(RAW_DATA_TX_ID, RAW_DATA_POOL, TRUE, bytesNeeded);
-        WF_ASSERT(byteCount != 0);
-        
-        /* flag this raw window as mounted (in use) */
-        SetRawWindowState(RAW_DATA_TX_ID, WF_RAW_DATA_MOUNTED);
-        return TRUE;
+        if (byteCount == 0)     // something wrong - we can't complete data Tx
+        {
+            //putrsUART("AllocateDataTxBuffer: something wrong -- RawMove failed to complete data Tx. Deallocate RAW_DATA_TX_ID, RAW_DATA_POOL\r\n");
+            return FALSE;       // just return and let host retry again.
+        }
+        else
+        {
+            /* flag this raw window as mounted (in use) */
+            SetRawWindowState(RAW_DATA_TX_ID, WF_RAW_DATA_MOUNTED);
+            return TRUE;
+        }
 
     }
     /* else not enough bytes available at this time to satisfy request */
     else
     {
+        //sprintf(st,"AllocateDataTxBuffer: failed to allocate memory, bufAvail=%d, bytesNeeded=%d\r\n",bufAvail,bytesNeeded);
+        //putrsUART(st);
         return FALSE;
     }
 
@@ -1015,8 +1033,12 @@ void RawGetByte(UINT16 rawId, UINT8 *pBuffer, UINT16 length)
 {
     UINT8 regId;
 
-    WF_ASSERT(!isIndexOutOfBounds(rawId)); /* attempting to read past end of RAW buffer */
-
+    //WF_ASSERT(!isIndexOutOfBounds(rawId)); /* attempting to read past end of RAW buffer */
+    if (isIndexOutOfBounds(rawId))
+    {
+        //putrsUART("====================> RawGetByte: IndexOutOfBounds\r\n");
+        return;
+    }
     regId = g_RawDataReg[rawId];
     ReadWFArray(regId, pBuffer, length);
 }
@@ -1038,8 +1060,13 @@ void RawSetByte(UINT16 rawId, UINT8 *pBuffer, UINT16 length)
 {
     UINT8 regId;
 
-    WF_ASSERT(!isIndexOutOfBounds(rawId)); /* attempting to write past end of RAW buffer */
-       
+    //WF_ASSERT(!isIndexOutOfBounds(rawId)); /* attempting to write past end of RAW buffer */
+
+    if (isIndexOutOfBounds(rawId))
+    {
+        //putrsUART("====================> RawSetByte: IndexOutOfBounds\r\n");
+        return;
+    }
     /* write data to raw window */
     regId = g_RawDataReg[rawId];
     WriteWFArray(regId, pBuffer, length);

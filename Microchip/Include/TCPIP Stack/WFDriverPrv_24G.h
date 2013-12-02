@@ -98,7 +98,9 @@
 #endif
 
 
-
+// Level is set before configuring as output. 
+// This avoids a potential glitch on the WiFi reset line that was occurring after the PLL work-around, 
+// causing the module to fail during chip reset.
 #define WF_SetCE_N(level)                                           \
     /* set pin to desired level       */                            \
     WF_HIBERNATE_IO   = level;                                      \

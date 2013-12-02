@@ -1,5 +1,17 @@
 Wifi G Demo
 
+
+Demo Version: 1.03
+MLA v5 June-2013  
+
+- No changes to Wi-Fi G Demo Board features.
+- Since there are changes to multiple WiFi-related files to Demo/WiFi Console/EZConfig projects
+  and Wi-Fi G Demo Board shares a lot of these common WiFi source files, revision 
+  change to keep track of June 2013 release.
+
+
+---------------------------------------------------------------------------------
+
 Demo Version: 1.02
 MLA v5 March-2013  
 

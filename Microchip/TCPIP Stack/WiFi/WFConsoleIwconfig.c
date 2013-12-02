@@ -214,7 +214,7 @@ void do_iwconfig_cmd(void)
     {
         if (!WF_hibernate.state) 
         {
-            WFInitScan();
+            // WFInitScan();
             WFConsolePrintRomStr("Scanning...", TRUE);
             if (WFStartScan() == WF_SUCCESS)
             {

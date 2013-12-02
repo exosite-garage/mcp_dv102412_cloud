@@ -108,7 +108,6 @@
 // Added to support EZ_CONFIG_STORE  
 // 25LC256 I/O pins
 //#define EEPROM_CS_TRIS		(TRISDbits.TRISD12)
-#ifdef EEPROM_CS_TRIS
 #define EEPROM_CS_IO		(LATDbits.LATD12)
 #define EEPROM_SCK_TRIS		(TRISGbits.TRISG6)
 #define EEPROM_SDI_TRIS		(TRISGbits.TRISG7)
@@ -120,7 +119,7 @@
 #define EEPROM_SPIBRG		(SPI2BRG)
 #define EEPROM_SPISTAT		(SPI2STAT)
 #define EEPROM_SPISTATbits	(SPI2STATbits)
-#endif
+
 
 //----------------------------
 // MRF24WG0MA/B WiFi I/O pins

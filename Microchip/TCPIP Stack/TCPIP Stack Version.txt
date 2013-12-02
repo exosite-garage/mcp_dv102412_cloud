@@ -7,6 +7,26 @@ Note: Please file bug-reports/bug-fixes at http://support.microchip.com/ or post
       Look for stack updates at http://www.microchip.com/mal/
 
 ********
+v5.42.08    June 2013
+********      
+Changes:
+1. Clarify item#4 in v5.42.04 Oct 2012 release. Change is applicable to MRF24WB/G only. 
+   (MRF24WB/G) SSL client with RSA 2048bits is enabled by default. Applies only for PIC24/32. Not supported for PIC18.
+2. (WiFi G Demo Board) Disable option WF_EASY_CONFIG_DEMO in WF_Config.h to resolve compilation error with IperfAppInit().
+   
+
+Fixes:
+1. (MRF24WB) Resolve firmware 0x120C host scan bug : Host scan asserts when it is conducted after WPA-PSK fails due to key mismatch.
+   Refer to WFScan.c and WFMgmtMsg.c. 
+2. (MRF24WB) Resolve reset problem bug. Modified WF_SetCE_N and WF_SetRST_N to first set the level, than configure pin as output. 
+   Refer to WFDriverPrv.h. This change is already available in WFDriverPrv_24G.h for MRF24WG in MLA v5.42.02 Aug 2012 release.
+3. (MRF24W) Resolve WiFi Console demo IPERF issue bug fix : Enlarge generic tcp rx/tx buffer size. Refer to TCPIP MRF24W.h. 
+4. (MRF24W) Resolve EasyConfig bug fix for retry count when DISABLE_MODULE_FW_CONNECT_MANAGER_IN_INFRASTRUCTURE is enabled.
+   Refer to function WFEasyConfigProcess() in WFEasyconfig.c   
+5. (MRF24W) Resolve handling of max length SSID of AP. Refer to WFEasyConfig.c and CustomHTTPApp.c  
+
+
+********
 v5.42.06    Feb 2013
 ********      
 Changes:

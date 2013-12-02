@@ -97,20 +97,23 @@
 #error Must define HOST_CPU_ENDIANNESS to either WF_LITTLE_ENDIAN or WF_BIG_ENDIAN
 #endif
 
-
-
+// Must set level first, than configure as output
+// This avoids a potential glitch on the WiFi reset line that was occurring after the PLL work-around, 
+// causing the module to fail during chip reset.
 #define WF_SetCE_N(level)                                           \
-    /* configure I/O as ouput         */                            \
-    WF_HIBERNATE_TRIS = 0;                                          \
     /* set pin to desired level       */                            \
-    WF_HIBERNATE_IO   = level    
+    WF_HIBERNATE_IO   = level;                                      \
+                                                                    \
+    /* configure I/O as ouput         */                            \
+    WF_HIBERNATE_TRIS = 0
 
+// must set level first, than configure as output
 #define WF_SetRST_N(level)                                          \
-    /* configure the I/O as an output   */                          \
-    WF_RESET_TRIS = 0;                                              \
     /* set pin to desired level         */                          \
-    WF_RESET_IO   = level    
-
+    WF_RESET_IO   = level;                                          \
+                                                                    \
+    /* configure the I/O as an output   */                          \
+    WF_RESET_TRIS = 0
 
 /* SPI Tx Message Types */
 #define WF_DATA_REQUEST_TYPE            ((UINT8)1)

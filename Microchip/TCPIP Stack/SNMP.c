@@ -792,6 +792,8 @@ _SNMPDiscard:
 
 
 #if !defined(SNMP_TRAP_DISABLED)
+static DWORD  snmpTrapTimer=0;
+
 /****************************************************************************
   Function:
 	void SNMPNotifyPrepare(IP_ADDR* remoteHost,
@@ -887,7 +889,7 @@ BOOL SNMPIsNotifyReady(IP_ADDR* remoteHost)
 	if(SNMPNotifyInfo.socket == INVALID_UDP_SOCKET)
 	{
 		SNMPNotifyInfo.socket = UDPOpenEx(remoteNode.IPAddr.Val,UDP_OPEN_IP_ADDRESS,AGENT_NOTIFY_PORT,SNMP_NMS_PORT);
-        //return (SNMPNotifyInfo.socket != INVALID_UDP_SOCKET);
+        snmpTrapTimer = TickGet();
 	}
 
 	if(UDPIsOpened(SNMPNotifyInfo.socket)!= TRUE)
@@ -896,23 +898,36 @@ BOOL SNMPIsNotifyReady(IP_ADDR* remoteHost)
 	}
 	else
 	{
-		return TRUE;
+            snmpTrapTimer = TickGet();
+            return TRUE;
 	}
 
-#if 0
-    if ( ARPIsResolved(remHostIpAddrPtr, &remoteNode.MACAddr) )
-    {
-        remoteNode.IPAddr.Val = remHostIpAddrPtr->Val;
-
-        //SNMPNotifyInfo.socket = UDPOpen(AGENT_NOTIFY_PORT, &remoteNode, SNMP_NMS_PORT);
-        
-		SNMPNotifyInfo.socket = UDPOpenEx(remoteNode.IPAddr.Val,UDP_OPEN_IP_ADDRESS,AGENT_NOTIFY_PORT,SNMP_NMS_PORT);
-
-        return (SNMPNotifyInfo.socket != INVALID_UDP_SOCKET);
-    }
-#endif
-
+    
     return FALSE;
+}
+
+/****************************************************************************
+  Function:
+    DWORD SNMPGetTrapTime(void)
+
+  Summary:
+	Returns trap resolve get time.
+	
+  Description:
+	
+  Precondition:
+	SNMPNotifyPrepare() is already called.
+
+  Parameters:
+        void      
+  Return Values:
+        system time    
+  Remarks:
+        none
+ ***************************************************************************/
+DWORD SNMPGetTrapTime(void)
+{
+	return snmpTrapTimer;
 }
 
 /****************************************************************************

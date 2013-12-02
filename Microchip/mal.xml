@@ -8,10 +8,10 @@
 <DISTRIBUTION>
 
   <INFO>
-    <NAME>Microchip Application Libraries</NAME>
-    <SHORT_NAME>MAL</SHORT_NAME>
+    <NAME>Microchip Libraries for Applications</NAME>
+    <SHORT_NAME>MLA</SHORT_NAME>
     <VERSION>
-      <STRING>2013-02-15</STRING>
+      <STRING>2013-06-15</STRING>
     </VERSION>
   </INFO>
 
@@ -32,7 +32,7 @@
       <NAME>Microchip Full Speed USB Library</NAME>
       <SHORT_NAME>MCHPFSUSB</SHORT_NAME>
       <VERSION>
-        <STRING>2.9i</STRING>
+        <STRING>2.9j</STRING>
       </VERSION>
     </LIBRARY>
 
@@ -52,7 +52,7 @@
       <VERSION>
         <MAJOR>5</MAJOR>
         <MINOR>42</MINOR>
-        <DOT>06</DOT>
+        <DOT>08</DOT>
       </VERSION>
     </LIBRARY>
 
@@ -94,17 +94,6 @@
         <MINOR>02</MINOR>
         <DOT>01</DOT>
       </VERSION>
-    </LIBRARY>
-
-    <LIBRARY>
-      <NAME>Cryptographics</NAME>
-      <SHORT_NAME>CRYPTO</SHORT_NAME>
-      <VERSION>
-        <MAJOR>1</MAJOR>
-        <MINOR>00</MINOR>
-        <!-- Intentionally no DOT information. MAJOR/MINOR will increment when there's API/file location compatibility change. This serves as a marker if a crypto installer is compatible with this MLA version or not. -->
-      </VERSION>
-    <INSTALLED>NO</INSTALLED>
     </LIBRARY>
 
   </LIBRARIES>

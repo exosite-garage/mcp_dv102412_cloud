@@ -85,12 +85,13 @@ typedef enum
     PS_POLL_DISABLED        /* power save mode disabled */ 
 } tWFPsPwrMode;
 
+/* Power Save Mode Request Structure */
 typedef struct pwrModeRequestStruct
 {
-    UINT8 mode;
-    UINT8 wake;
-    UINT8 rcvDtims;
-    UINT8 reserved;            /* pad byte */
+    UINT8 mode;             /* PS_POLL_ENABLED or PS_POLL_DISABLED */
+    UINT8 wake;             /* 1 if stay awake, else 0 */      
+    UINT8 rcvDtims;         /* DTIM interval */
+    UINT8 reserved;         /* pad byte */
 } tWFPwrModeReq;
 
 
@@ -100,15 +101,24 @@ typedef struct pwrModeRequestStruct
 *********************************************************************************************************
 */
 
-static UINT8 g_powerSaveState = WF_PS_OFF;
-static BOOL  g_psPollActive   = FALSE;     
-static BOOL  g_sleepNeeded    = FALSE;
-static BOOL  g_AppPowerSaveModeEnabled = FALSE;
+/* Power save states 
+<table>
+WF_PS_HIBERNATE                          1
+WF_PS_PS_POLL_DTIM_ENABLED      2
+WF_PS_PS_POLL_DTIM_DISABLED    3
+WF_PS_OFF                                     4
+</table>
+*/
+static UINT8 g_powerSaveState = WF_PS_OFF;  
+
+static BOOL  g_psPollActive   = FALSE;          /* Status of PS-Poll */
+static BOOL  g_sleepNeeded    = FALSE;          /* TRUE if need to put device back into PS-Poll sleep mode. else FALSE */
+static BOOL  g_AppPowerSaveModeEnabled = FALSE; /* Enable or Disable Power Save Mode */
 
 BOOL g_rxDtim;
 
 #if !defined(MRF24WG)
-extern BOOL gRFModuleVer1209orLater;
+extern BOOL gRFModuleVer1209orLater;        /* Applicable for MRF24WB0M only */
 #endif
 
 /*

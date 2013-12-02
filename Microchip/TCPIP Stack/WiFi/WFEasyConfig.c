@@ -68,9 +68,12 @@ extern UINT8 ConnectionProfileID;
 
 tWFEasyConfigCtx g_easyConfigCtx;
 
-#if MY_DEFAULT_NETWORK_TYPE == WF_SOFT_AP			
+#if (MY_DEFAULT_NETWORK_TYPE == WF_SOFT_AP)	|| defined(WF_PRE_SCAN_IN_ADHOC)		
 tWFScanResult preScanResult[50];      //WF_PRESCAN  May change struct later for memory optimization
-tWFHibernate WF_hibernate;
+#endif
+
+#if (MY_DEFAULT_NETWORK_TYPE == WF_SOFT_AP)
+extern tWFHibernate WF_hibernate;
 #endif
 
 /* Easy Config Private Functions */
@@ -221,12 +224,12 @@ static int WFEasyConfigProcess(void)
     /* Set wlan mode */
     WF_CPSetNetworkType(ConnectionProfileID, CFGCXT.type);
 
-#if defined(DISABLE_MODULE_FW_CONNECT_MANAGER_IN_INFRASTRUCTURE)
-    WF_DisableModuleConnectionManager();
-#endif
-
     if (AppConfig.networkType == WF_INFRASTRUCTURE) 
         WF_CASetListRetryCount(MY_DEFAULT_LIST_RETRY_COUNT_INFRASTRUCTURE);
+    
+#if defined(DISABLE_MODULE_FW_CONNECT_MANAGER_IN_INFRASTRUCTURE)
+        WF_DisableModuleConnectionManager();
+#endif
     
 #if MY_DEFAULT_NETWORK_TYPE == WF_SOFT_AP
     // SoftAP: To allow redirection, need to hibernate before changing network type. Module FW has SoftAP flag and therefore hibernate mode
@@ -271,9 +274,12 @@ void WFInitScan(void)
     return;
 }
 
+//UINT8 state_SavedBeforeScan = 0, ID_SavedBeforeScan = 0; 
+
 UINT16 WFStartScan(void)
 {
-
+    // save the state and ID
+//    WF_CMCheckConnectionState(&state_SavedBeforeScan, &ID_SavedBeforeScan);
 
     /* If scan already in progress bail out */
     if (IS_SCAN_IN_PROGRESS(SCANCXT.scanState)) 
@@ -293,8 +299,10 @@ UINT16 WFRetrieveScanResult(UINT8 Idx, tWFScanResult *p_ScanResult)
         return WF_ERROR_INVALID_PARAM;
 
     WF_ScanGetResult(Idx, p_ScanResult);
-    p_ScanResult->ssid[p_ScanResult->ssidLen] = 0; /* Terminate */
-
+    if (p_ScanResult->ssidLen < WF_MAX_SSID_LENGTH)
+        p_ScanResult->ssid[p_ScanResult->ssidLen] = 0; /* Terminate */
+   // if (p_ScanResult->ssidLen == WF_MAX_SSID_LENGTH)
+   //     p_ScanResult->ssidLen -= 1;
     return WF_SUCCESS;
 }
 
@@ -313,12 +321,37 @@ void WFScanEventHandler(UINT16 scanResults)
 
 //#if defined ( WF_CONSOLE ) && defined ( EZ_CONFIG_SCAN ) && !defined(__18CXX)
 #if defined ( EZ_CONFIG_SCAN ) && !defined(__18CXX)
+#if defined(WF_PRE_SCAN_IN_ADHOC)
+
+void WFGetScanResults(void)
+{
+	int    id,counts;
+
+	if (SCANCXT.numScanResults == 0)
+	   return;
+
+	if (IS_SCAN_IN_PROGRESS(SCANCXT.scanState))
+	   return;
+
+	if (!IS_SCAN_STATE_VALID(SCANCXT.scanState))
+	   return;
+
+	counts = SCANCXT.numScanResults>50? 50:SCANCXT.numScanResults;
+	for(id = 0;id<SCANCXT.numScanResults;id++)
+	{
+		WFRetrieveScanResult(id, &preScanResult[id]);
+	}
+	SCAN_CLEAR_DISPLAY(SCANCXT.scanState);
+	return;
+}
+#endif // #if defined(WF_PRE_SCAN_IN_ADHOC)
 void WFDisplayScanMgr()
 {
     tWFScanResult   bssDesc;
-    char ssid[80];
+    char ssid[WF_MAX_SSID_LENGTH+1];
     char rssiChan[48];
-    int    count;
+    int    i;
+    char    st[80];
 
     if (SCANCXT.numScanResults == 0)
        return;
@@ -332,45 +365,57 @@ void WFDisplayScanMgr()
        return;
 
     WFRetrieveScanResult(SCANCXT.displayIdx, &bssDesc);
+    sprintf(st,"%3d ",SCANCXT.displayIdx);
+    putrsUART(st);
+
+    if (bssDesc.bssType == 1)
+        sprintf(st,"NetType: Infra.");
+    else if (bssDesc.bssType == 2)
+        sprintf(st,"NetType: Ad-hoc");
+    putrsUART(st);
+    
+    sprintf(st,", ESSID:");
+    putrsUART(st);
 
     /* Display SSID */
-    count = SCANCXT.displayIdx + 1;
-    sprintf(ssid, "%d SSID: %s\r\n", count, bssDesc.ssid);
+    for(i=0;i<bssDesc.ssidLen;i++) ssid[i] = bssDesc.ssid[i];
+    ssid[bssDesc.ssidLen] = 0;
     putsUART(ssid);
+    putrsUART("\r\n");
 
     /* Display SSID  & Channel */
 #ifdef STACK_USE_CERTIFICATE_DEBUG	
-	sprintf(rssiChan, "  => RSSI: %u, Channel: %u", bssDesc.rssi, bssDesc.channel);
-    putsUART(rssiChan);
+	sprintf(rssiChan, "\tRSSI: %3u, Channel: %2u", bssDesc.rssi, bssDesc.channel);
+        putsUART(rssiChan);
 	/* Display BSSID */
-	sprintf(rssiChan, " , BSSID: %02x:%02x:%02x:%02x:%02x:%02x ,", 
+	sprintf(rssiChan, ", BSSID: %02x:%02x:%02x:%02x:%02x:%02x",
 				 bssDesc.bssid[0],bssDesc.bssid[1],bssDesc.bssid[2],
 				 bssDesc.bssid[3],bssDesc.bssid[4],bssDesc.bssid[5]);
 	putsUART(rssiChan);
 	/* Display Security Mode */
 	if((bssDesc.apConfig & 0x10) == 0)	  // bit4==0:	open (no security)
 	{
-		sprintf(rssiChan, "Security mode: %s\r\n", "Open");
+		sprintf(rssiChan, ", SecMode: %s\r\n", "Open");
 	}
-	else								 // bit4== 1:	security
+	else	// bit4== 1:	security
 	{			 
 		if ((bssDesc.apConfig & 0x80) == 0x80) // bit7 ==  1: WPA2
 		{
-			sprintf(rssiChan, "Security mode: %s\r\n", "WPA2");
+			sprintf(rssiChan, ", SecMode: %s\r\n", "WPA2");
 		}
 		else if((bssDesc.apConfig & 0x40) == 0x40)//bit6==1: WPA
 		{
-			sprintf(rssiChan, "Security mode: %s\r\n", "WPA");
+			sprintf(rssiChan, ", SecMode: %s\r\n", "WPA");
 		}
-		else									  // bit7==0, bit6 ==0, WEP
+		else	// bit7==0, bit6 ==0, WEP
 		{
-			sprintf(rssiChan, "Security mode: %s\r\n", "WEP");
+			sprintf(rssiChan, ", SecMode: %s\r\n", "WEP");
 		}
 	}
 	putsUART(rssiChan);
 #else
-	sprintf(rssiChan, "  => RSSI: %u, Channel: %u\r\n", bssDesc.rssi, bssDesc.channel);
-    putsUART(rssiChan);
+	sprintf(rssiChan, ", RSSI: %u, Channel: %u\r\n", bssDesc.rssi, bssDesc.channel);
+        putsUART(rssiChan);
 #endif
 
 #if (MY_DEFAULT_NETWORK_TYPE == WF_SOFT_AP) 		

@@ -91,8 +91,10 @@
       </logicalFolder>
       <itemPath>../MainDemo.h</itemPath>
       <itemPath>../WF_Config.h</itemPath>
+      <itemPath>../IperfApp.h</itemPath>
       <itemPath>../HardwareProfile.h</itemPath>
       <itemPath>../TCPIPConfig.h</itemPath>
+      <itemPath>../Exosite_Demo.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LibraryFiles"
                    displayName="Library Files"
@@ -223,11 +225,10 @@
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
-    <Elem>../Configs</Elem>
-    <Elem>../../../exosite</Elem>
     <Elem>../../../Microchip/TCPIP Stack</Elem>
     <Elem>../../../Microchip/Include/TCPIP Stack</Elem>
-    <Elem>../WifiGDemoWebPages</Elem>
+    <Elem>../../../exosite</Elem>
+    <Elem>..</Elem>
     <Elem>../../../utilities</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
@@ -303,6 +304,7 @@
         <property key="warning-level" value=""/>
       </C32-AS>
       <C32-LD>
+        <property key="additional-options-use-response-files" value="false"/>
         <property key="enable-check-sections" value="false"/>
         <property key="exclude-floating-point-library" value="false"/>
         <property key="exclude-standard-libraries" value="false"/>
@@ -315,6 +317,7 @@
         <property key="map-file"
                   value="&quot;${DISTDIR}/WiFi_Card_Demo.X.${IMAGE_TYPE}.map&quot;"/>
         <property key="no-startup-files" value="false"/>
+        <property key="oXC32ld-extra-opts" value=""/>
         <property key="optimization-level" value=""/>
         <property key="preprocessor-macros" value=""/>
         <property key="remove-unused-sections" value="false"/>
@@ -352,6 +355,8 @@
       </C32CPP>
       <C32Global>
         <property key="legacy-libc" value="false"/>
+        <property key="save-temps" value="false"/>
+        <property key="wpo-lto" value="false"/>
       </C32Global>
       <PICkit3PlatformTool>
         <property key="ADC 1" value="true"/>
@@ -412,6 +417,7 @@
         <property key="programoptions.preserveprogramrange.end" value="0x1d07ffff"/>
         <property key="programoptions.preserveprogramrange.start" value="0x1d000000"/>
         <property key="programoptions.preserveuserid" value="false"/>
+        <property key="programoptions.testmodeentrymethod" value="VPPFirst"/>
         <property key="programoptions.usehighvoltageonmclr" value="false"/>
         <property key="programoptions.uselvpprogramming" value="false"/>
         <property key="voltagevalue" value="3.25"/>

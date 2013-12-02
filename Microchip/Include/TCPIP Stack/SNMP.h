@@ -443,7 +443,7 @@ extern SNMP_NOTIFY_INFO SNMPNotifyInfo; //notify info for trap
 extern MPFS_HANDLE hMPFS;	//MPFS file handler
 extern SNMPNONMIBRECDINFO gSnmpNonMibRecInfo[];
 
-
+DWORD SNMPGetTrapTime(void);
 BYTE IsValidLength(WORD *len);
 void SNMPInit(void);
 BOOL SNMPTask(void);

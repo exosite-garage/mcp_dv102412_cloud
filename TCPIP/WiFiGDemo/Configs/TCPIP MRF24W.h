@@ -79,9 +79,9 @@
 //#define STACK_USE_TFTP_CLIENT			// Trivial File Transfer Protocol client
 //#define STACK_USE_TELNET_SERVER		// Telnet server
 #define STACK_USE_ANNOUNCE			// Microchip Embedded Ethernet Device Discoverer server/client
-//#define STACK_USE_DNS				// Domain Name Service Client for resolving hostname strings to IP addresses
-//#define STACK_USE_DNS_SERVER			// Domain Name Service Server for redirection to the local device
-//#define STACK_USE_NBNS				// NetBIOS Name Service Server for responding to NBNS hostname broadcast queries
+#define STACK_USE_DNS				// Domain Name Service Client for resolving hostname strings to IP addresses
+#define STACK_USE_DNS_SERVER			// Domain Name Service Server for redirection to the local device
+#define STACK_USE_NBNS				// NetBIOS Name Service Server for responding to NBNS hostname broadcast queries
 #define STACK_USE_REBOOT_SERVER			// Module for resetting this PIC remotely.  Primarily useful for a Bootloader.
 //#define STACK_USE_SNTP_CLIENT			// Simple Network Time Protocol for obtaining current date/time from Internet
 //#define STACK_USE_UDP_PERFORMANCE_TEST	// Module for testing UDP TX performance characteristics.  NOTE: Enabling this will cause a huge amount of UDP broadcast packets to flood your network on the discard port.  Use care when enabling this on production networks, especially with VPNs (could tunnel broadcast traffic across a limited bandwidth connection).
@@ -101,7 +101,7 @@
  *   applications.  If your custom application requires it
  *   otherwise, uncomment the appropriate selection.
  */
-//#define STACK_USE_MPFS2
+#define STACK_USE_MPFS2
 
 /* MPFS Storage Location
  *   If html pages are stored in internal program memory,

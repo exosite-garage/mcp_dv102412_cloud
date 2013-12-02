@@ -63,7 +63,7 @@
 
 #if defined( WF_CONSOLE )
 #include "TCPIP Stack/WFConsole.h"
-//#include "IperfApp.h"  // removing to compile for IDE v1.90
+#include "IperfApp.h"
 #endif 
 
 
@@ -463,7 +463,7 @@ void MACProcess(void)
     
             WF_hibernate.state = WF_HB_NO_SLEEP;
             StackInit();
-            #if defined(WF_CONSOLE) && !defined(STACK_USE_EZ_CONFIG)
+            #if defined(WF_CONSOLE_DEMO) || (defined(WF_EASY_CONFIG_DEMO) && defined(__C32__))
                 IperfAppInit();
             #endif
     
@@ -472,7 +472,7 @@ void MACProcess(void)
     #endif
     
     
-    #if defined(WF_CONSOLE_DEMO)
+    #if defined(WF_CONSOLE_DEMO) || (defined(WF_EASY_CONFIG_DEMO) && defined(__C32__))
         IperfAppCall();
     #endif
 
@@ -483,12 +483,10 @@ void MACProcess(void)
            
     #if defined(WF_CONSOLE)
         WFConsoleProcess();
-        #if defined( WF_CONSOLE_IFCFGUTIL )
+        #if defined(WF_CONSOLE_DEMO) || defined(WF_EASY_CONFIG_DEMO)
             if (WF_hibernate.state == WF_HB_NO_SLEEP)
                 IperfAppCall();
-            #elif !defined(STACK_USE_EZ_CONFIG)
-                IperfAppCall();
-            #endif
+        #endif
             WFConsoleProcessEpilogue();
     #endif
     

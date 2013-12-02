@@ -117,7 +117,8 @@ BOOL AllocateMgmtTxBuffer(UINT16 bytesNeeded)
     {
         /* allocate and create the new Tx buffer (mgmt or data) */
         byteCount = RawMove(RAW_TX_ID, RAW_MGMT_POOL, TRUE, bytesNeeded);
-        WF_ASSERT(byteCount != 0);
+        if (byteCount == 0)
+            return FALSE;       // just return and let host retry again
     }
     /* else not enough bytes available at this time to satisfy request */
     else
@@ -157,7 +158,8 @@ BOOL AllocateDataTxBuffer(UINT16 bytesNeeded)
     {
         /* allocate and create the new Tx buffer (mgmt or data) */
         byteCount = RawMove(RAW_TX_ID, RAW_DATA_POOL, TRUE, bytesNeeded);
-        WF_ASSERT(byteCount != 0);
+        if (byteCount == 0)
+            return FALSE;       // just return and let host retry again.
     }
     /* else not enough bytes available at this time to satisfy request */
     else

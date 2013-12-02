@@ -400,18 +400,20 @@ void WFConsoleProcessEpilogue(void)
 {
     if (WFConsoleIsConsoleMsgReceived())
     {
+#if defined(WF_EASY_CONFIG_DEMO) && !defined(__C32__)
+        putrsUART("Iperf supports only PIC32 for EasyConfig\n\r");
+#else
         if (( memcmppgm2ram(ARGV[0], "iperf", 5) == 0 ) || ( memcmppgm2ram(ARGV[0], "kill", 4) == 0 ))
         {
             return;
-        } 
-    
+        }
+#endif
         if ( memcmppgm2ram(ARGV[0], "help", 4) != 0 )
         {
             WFConsolePrintRomStr("Unknown cmd: ", FALSE);
             WFConsolePrintRamStr(ARGV[0], TRUE);
         }
-             
-
+            
         WFConsoleReleaseConsoleMsg();
     }
 }

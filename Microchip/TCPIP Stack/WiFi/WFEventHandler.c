@@ -102,6 +102,10 @@ extern enum WpaEapConnEvt g_EapConnEvent;
 extern void SignalWiFiConnectionChanged(BOOL state);
 extern void RenewDhcp(void);
 
+#if defined(HOST_CM_TEST)
+volatile    UINT8 g_event = 0xff;
+#endif
+
 /*****************************************************************************
  * FUNCTION: WFProcessMgmtIndicateMsg
  *
@@ -117,9 +121,12 @@ void WFProcessMgmtIndicateMsg()
     UINT8 buf[6];
     UINT8 event = 0xff;
     UINT16 eventInfo;
+
+#if defined(MRF24WG)
     tMgmtIndicatePassphraseReady passphraseReady;
     tMgmtIndicateSoftAPEvent softAPEvent;
-    UINT8 *extra;
+#endif
+    UINT8 *extra = NULL;
 
     /* read 2-byte header of management message */
     RawRead(RAW_MGMT_RX_ID, 0, sizeof(tMgmtIndicateHdr), (UINT8 *)&hdr); 
@@ -267,6 +274,10 @@ void WFProcessMgmtIndicateMsg()
     
     /* free mgmt buffer */
     DeallocateMgmtRxBuffer();
+
+#if defined(HOST_CM_TEST)
+    g_event = event;    
+#endif
 
     /* if the application wants to be notified of the event */
     if (isNotifyApp(event))

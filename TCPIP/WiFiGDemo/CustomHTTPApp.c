@@ -239,9 +239,7 @@ HTTP_IO_RESULT HTTPExecuteGet(void)
 
             if (AppConfig.networkType == WF_SOFT_AP)
             {   // SoftAP: display pre-scan results before starting as SoftAP. SoftAP does not scan.
-#if MY_DEFAULT_NETWORK_TYPE == WF_SOFT_AP
                 bssDesc = preScanResult[bssIdx];
-#endif
             }
             else
             {
@@ -805,7 +803,17 @@ void HTTPPrint_name(void)
 {
     if (bssDescIsValid)
     {
-        TCPPutString(sktHTTP, bssDesc.ssid);
+        //TCPPutString(sktHTTP, bssDesc.ssid);
+        if(strlen((const char*)bssDesc.ssid)<32)
+            TCPPutString(sktHTTP, bssDesc.ssid);
+        else
+        {
+            unsigned char buf_tmp[33];
+            int i;
+            for(i=0;i<32;i++) buf_tmp[i] = bssDesc.ssid[i];
+            buf_tmp[32] = 0;
+            TCPPutString(sktHTTP, buf_tmp);
+        }
     }
     else
     {

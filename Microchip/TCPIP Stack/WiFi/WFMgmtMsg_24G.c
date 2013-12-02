@@ -85,20 +85,31 @@ BOOL g_WaitingForMgmtResponse = FALSE;
 #endif
 
 
+/*******************************************************************************
+  Function:    
+    void SendMgmtMsg(UINT8 *p_header, UINT8 headerLength, UINT8 *p_data, UINT8 dataLength)
 
-/*****************************************************************************
- * FUNCTION: SendMgmtMsg
- *
- * RETURNS:  error code
- *
- * PARAMS:   p_header      -- pointer to mgmt message header data
- *           headerLength  -- number of bytes in the header
- *                              will be written
- *           p_data        -- pointer to mgmt message data
- *           dataLength    -- number of byte of data
- *
- *  NOTES:   Sends a management message
- *****************************************************************************/
+  Summary:
+    Sends a management message to MRF24W.
+
+  Description:
+    Allocates management buffer on MRF24W. Then sends the management message 
+    (header + data) to MRF24W.
+    
+  Precondition:
+    MACInit must be called.
+
+  Parameters:
+    p_header        -- pointer to mgmt message header data
+    headerLength  -- number of bytes in the header will be written
+    p_data            -- pointer to mgmt message data
+    dataLength     -- number of bytes of data
+
+  Returns:
+    None
+      
+  Remarks:
+      *****************************************************************************/
 void SendMgmtMsg(UINT8 *p_header,
                  UINT8 headerLength,
                  UINT8 *p_data,
@@ -139,35 +150,59 @@ void SendMgmtMsg(UINT8 *p_header,
    
 }                           
 
-/*****************************************************************************
- * FUNCTION: SignalMgmtConfirmReceivedEvent
- *
- * RETURNS:  None
- *
- * PARAMS:   None
- *
- *  NOTES:   Called by ProcessMgmtRxMsg when a mgmt confirm has been received.  
- *           This function then sets a local flag for this module indicating 
- *           the event.  
- *****************************************************************************/
+/*******************************************************************************
+  Function:    
+    void SignalMgmtConfirmReceivedEvent(void)
+
+  Summary:
+    Signals that a confirmation message has been received. 
+
+  Description:
+    Called by ProcessMgmtRxMsg() when a mgmt confirm type (WF_MGMT_CONFIRM_TYPE) 
+    has been received. This function then sets a local flag (gMgmtConfirmMsgReceived) for 
+    this module indicating the event.  
+    
+  Precondition:
+    MACInit must be called.
+
+  Parameters:
+    None
+
+  Returns:
+    None
+      
+  Remarks:
+      *****************************************************************************/
 void SignalMgmtConfirmReceivedEvent(void)
 {
     gMgmtConfirmMsgReceived = TRUE;        
 }     
 
-/*****************************************************************************
- * FUNCTION: WaitForMgmtResponse
- *
- * RETURNS:  None
- *
- * PARAMS:   expectedSubtype -- The expected subtype of the mgmt response
- *           freeAction      -- FREE_MGMT_BUFFER or DO_NOT_FREE_MGMT_BUFFER
- *
- *  NOTES:   Called after sending a mgmt request.  This function waits for a mgmt
- *           response.  The caller can optionally request the the management 
- *           response be freed immediately (by this function) or not freed.  If not
- *           freed the caller is responsible to free the response buffer.
- *****************************************************************************/
+/*******************************************************************************
+  Function:    
+    void WaitForMgmtResponse(UINT8 expectedSubtype, UINT8 freeAction)
+
+  Summary:
+    Waits for a management response
+
+  Description:
+    Called after sending a mgmt request.  This function waits for a mgmt
+    response.  The caller can optionally request the the management 
+    response be freed immediately (by this function) or not freed.  If not
+    freed, the caller is responsible to free the response buffer.
+    
+  Precondition:
+    MACInit must be called.
+
+  Parameters:
+    expectedSubtype -- Expected subtype of the mgmt response
+    freeAction           -- FREE_MGMT_BUFFER or DO_NOT_FREE_MGMT_BUFFER
+   
+  Returns:
+    None
+      
+  Remarks:
+      *****************************************************************************/
 void WaitForMgmtResponse(UINT8 expectedSubtype, UINT8 freeAction)
 {
     #if defined(__18CXX)
@@ -242,6 +277,17 @@ void WaitForMgmtResponse(UINT8 expectedSubtype, UINT8 freeAction)
                 putrsUART("No stored scan results\r\n");
             #endif
         } 
+        else if (hdr.result != WF_SUCCESS) 
+        {
+            #if defined(STACK_USE_UART)
+                UINT8 buf[8];
+                putrsUART("WaitForMgmtResponse result error: ");
+                sprintf((char *)buf, "%d",hdr.result);
+                putrsUART((char *)buf);
+                putrsUART("\r\n");
+            #endif
+            //WF_ASSERT(FALSE);
+        } 
                
         /* free mgmt buffer */
         DeallocateMgmtRxBuffer();
@@ -249,29 +295,38 @@ void WaitForMgmtResponse(UINT8 expectedSubtype, UINT8 freeAction)
 
 }  
 
+/*******************************************************************************
+  Function:    
+    void WaitForMgmtResponseAndReadData(UINT8 expectedSubtype, UINT8 numDataBytes,  
+                                        UINT8 startIndex, UINT8 *p_data)
 
-/*****************************************************************************
- * FUNCTION: WaitForMgmtRespAndReadData
- *
- * RETURNS:  None
- *
- * PARAMS:   expectedSubtype -- management message subtype that we are expecting
- *           p_data          -- pointer where any desired management data bytes 
- *                              will be written
- 
- *           numDataBytes    -- Number of data bytes from mgmt response to write to
- *                              p_data.  Data always starts at index 4 of mgmt response.
- *           skipDataRead    -- if TRUE, then no data will be read and the mgmt buffer will not
- *                              be freed.  If FALSE, the data will be read and the mgmt buffer
- *                              will be freed.
- *
- *  NOTES:   Waits for the mgmt response message and validates it by:
- *             1) checking the result field
- *             2) verifying that the received subtype matches the execpted subtype
- *
- *            In addition, this function reads the desired number of data bytes from 
- *            the mgmt response, copies them to p_data, and then frees the mgmt buffer. 
- *****************************************************************************/
+  Summary:
+    Waits for a management response and read data.
+
+  Description:
+    Waits for the mgmt response message and validates it by:
+    1) checking the result field
+    2) verifying that the received subtype matches the expected subtype
+    In addition, this function reads the desired number of data bytes from 
+    the mgmt response, copies them to p_data, and then frees the mgmt buffer. 
+    
+  Precondition:
+    MACInit must be called.
+
+  Parameters:
+    expectedSubtype -- management message subtype that we are expecting
+    p_data          -- pointer where any desired management data bytes will be written
+    numDataBytes    -- Number of data bytes from mgmt response to write to
+                                 p_data.  Data always starts at index 4 of mgmt response.
+     skipDataRead    -- if TRUE, then no data will be read and the mgmt buffer will not
+                                   be freed.  If FALSE, the data will be read and the mgmt buffer
+                                  will be freed.
+   
+  Returns:
+    None
+      
+  Remarks:
+      *****************************************************************************/
 void WaitForMgmtResponseAndReadData(UINT8 expectedSubtype, 
                                     UINT8 numDataBytes,  
                                     UINT8 startIndex, 
@@ -301,17 +356,29 @@ void WaitForMgmtResponseAndReadData(UINT8 expectedSubtype,
 
 
 #if defined(WF_DEBUG)
-/*****************************************************************************
- * FUNCTION: WFSetFuncState
- *
- * RETURNS:  None
- *
- * PARAMS:   funcMask -- bit mask indicating the calling function
- *           state    -- WF_ENTERING_FUNCTION or WF_LEAVING_FUNCTION
- *
- *  NOTES:   Called by WF_ProcessEvent() to be able to detect if there is an attempt 
- *           to send a management message while processing the event (not allowed).
- *****************************************************************************/
+/*******************************************************************************
+  Function:    
+    void WFSetFuncState(UINT8 funcMask, UINT8 state)
+
+  Summary:
+    For WF_DEBUG only. Sets up the func state. 
+
+  Description:
+    Called by WF_ProcessEvent() to be able to detect if there is an attempt 
+    to send a management message while processing the event (not allowed).
+    
+  Precondition:
+    MACInit must be called.
+
+  Parameters:
+    funcMask -- bit mask indicating the calling function
+    state    -- WF_ENTERING_FUNCTION or WF_LEAVING_FUNCTION
+   
+  Returns:
+    None
+      
+  Remarks:
+      *****************************************************************************/
 void WFSetFuncState(UINT8 funcMask, UINT8 state)
 {
     if (state == WF_ENTERING_FUNCTION)

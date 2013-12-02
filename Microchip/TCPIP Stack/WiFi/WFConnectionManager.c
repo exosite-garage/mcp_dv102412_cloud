@@ -55,7 +55,7 @@
 */
 
 #include "TCPIP Stack/WFMac.h"
-
+//#include "TCPIP Stack/WFEasyConfig.h"
 #if defined(WF_CS_TRIS)
 
 
@@ -188,7 +188,13 @@ WF_CMIsDisconnectAllowed(void)
     Operation results. Success or Failure
       
   Remarks:
-    None.
+    Disconnection is allowed only in connected state.
+    If MRF24W FW is in the midst of connection (or reconnection) process, then
+    disconnect can hammer connection process, and furthermore it may cause
+    fatal failure in MRF24W FW operation. To be safe to use disconnect, we strongly
+    recommend the user to disable module FW connection manager by enabling 
+    #define DISABLE_MODULE_FW_CONNECT_MANAGER_IN_INFRASTRUCTURE
+    in WF_Config.h
   *****************************************************************************/
 UINT16 WF_CMDisconnect(void)
 {
@@ -255,11 +261,19 @@ UINT16 WF_CMDisconnect(void)
   Remarks:
     None.
   *****************************************************************************/
+//extern UINT8 state_SavedBeforeScan, ID_SavedBeforeScan;  
 void WF_CMGetConnectionState(UINT8 *p_state, UINT8 *p_currentCpId)
 {
     UINT8  hdrBuf[2];
     UINT8  msgData[2];
-    
+#if 0   //defined ( EZ_CONFIG_SCAN )
+    if (IS_SCAN_IN_PROGRESS(SCANCXT.scanState))
+    { 
+        *p_state = state_SavedBeforeScan;
+        *p_currentCpId = ID_SavedBeforeScan;
+        return; 
+    }
+#endif
     hdrBuf[0] = WF_MGMT_REQUEST_TYPE;
     hdrBuf[1] = WF_CM_GET_CONNECTION_STATUS_SUBYTPE;
 

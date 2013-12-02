@@ -64,7 +64,7 @@ BOOL gRFModuleVer1209orLater = FALSE;
 
 #if defined(WF_CONSOLE)
 #include "TCPIP Stack/WFConsole.h"
-//#include "IperfApp.h" // removing to compile for IDE v1.90
+//#include "IperfApp.h"
 #endif
 
 //#include "TCPIP Stack/WFMac.h"
@@ -162,7 +162,7 @@ void WF_Init(void)
     
     #if defined(WF_CONSOLE)
         WFConsoleInit();
-        #if defined(WF_CONSOLE_DEMO)
+        #if defined(WF_CONSOLE_DEMO) || (defined(WF_EASY_CONFIG_DEMO) && defined(__C32__))
             IperfAppInit();
         #endif
     #endif

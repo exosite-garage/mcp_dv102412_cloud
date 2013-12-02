@@ -537,23 +537,14 @@ void WF_GetTxDataConfirm(UINT8 *p_txDataConfirm)
     void WF_SetRegionalDomain(UINT8 regionalDomain)
 
   Summary:
-    Enables or disables the MRF24W Regional Domain.
+    Enables or disables the MRF24W Regional Domain. This function is NOT supported 
+    due to FCC requirements, which does not allow programming of the regional domain. 
 
   Description:
-    Sets the regional domain on the MRF24W.  Note that this function does not 
-    overwrite the factory-set regional domain in FLASH.  By default the 
-    MRF24W will use the factory-set regional domain.  It is invalid to call 
-    this function while in a connected state.
-
-    Valid values for the regional domain are:
-    * WF_DOMAIN_FCC     
-    * WF_DOMAIN_IC      
-    * WF_DOMAIN_ETSI    
-    * WF_DOMAIN_SPAIN   
-    * WF_DOMAIN_FRANCE  
-    * WF_DOMAIN_JAPAN_A 
-    * WF_DOMAIN_JAPAN_B
-
+    MRF24W is programmed with FCC regional domain as default. 
+    To cater for other regional domains, use WF_CASetChannelList()
+    to set up specific channels. 
+   
   Precondition:
     MACInit must be called first.  This function must not be called while in a
     connected state.
@@ -580,14 +571,8 @@ void WF_SetRegionalDomain(UINT8 regionalDomain)
     Retrieves the MRF24W Regional domain
 
   Description:
-    Gets the regional domain on the MRF24W.  Allowable values are:
-    * WF_DOMAIN_FCC     
-    * WF_DOMAIN_IC      
-    * WF_DOMAIN_ETSI    
-    * WF_DOMAIN_SPAIN   
-    * WF_DOMAIN_FRANCE  
-    * WF_DOMAIN_JAPAN_A 
-    * WF_DOMAIN_JAPAN_B
+    Gets the regional domain on the MRF24W.  
+    MRF24W is programmed with FCC regional domain as default. 
 
   Precondition:
     MACInit must be called first.
