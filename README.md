@@ -78,6 +78,13 @@ LED2 - runtime
 Release Info
 ========================================
 ----------------------------------------
+Release 2013-12-04
+----------------------------------------
+--) slowed down the heartbeat posting<br>
+--) used the timer tick to handle the LED2 blinky rate<br>
+--) improved the tcp stability<br>
+
+----------------------------------------
 Release 2013-09-25
 ----------------------------------------
 --) updated to support MPLAB X v1.90<br>
